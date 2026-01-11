@@ -89,11 +89,32 @@ AVISION/
 └── README.md                   # This Manual
 ```
 
+## 🌍 Platform Support Status
+
+| Platform | Status | Implementation |
+| :--- | :--- | :--- |
+| **Windows** | ✅ **Verified** | `src/platform/desktop` (OpenCV + WinAPI) |
+| **Linux** | 🟢 **Compatible** | `src/platform/desktop` (OpenCV + ALSA/Console) |
+| **Android** | 🟡 **Ready** | `src/platform/android` (JNI Bridge Created) - [Setup Guide](ANDROID_SETUP.md) |
+| **iOS** | 🟡 **Ready** | `src/platform/ios` (Obj-C++ Bridge Created) |
+| **Embedded** | 🟡 **Ready** | `src/platform/embedded` (Headless Service) |
+
+### 🛠️ Embedded Build (Linux/Pi)
+To build the headless runner for Raspberry Pi or Linux servers:
+```bash
+mkdir build && cd build
+cmake .. -DPLATFORM=EMBEDDED
+make
+./AVisionHeadless
+```
+(Note: You may need to modify `CMakeLists.txt` to enable the `HeadlessRunner` target based on the flag).
+
 ## 🔮 Roadmap
 
 *   **Phase 1 (Done)**: Portable Core Architecture, Ground/Obstacle Detection, Audio Alerts.
 *   **Phase 2 (Done)**: Semantic Understanding (MobileNet-SSD Object Detection).
-*   **Phase 3**: Android Port (Create `src/platform/android/` shell).
+*   **Phase 3 (Done)**: Platform Portability (Android JNI Bridge & Passive Core Refactor).
+*   **Phase 4**: Optimization (Threading, Quantization).
 
 ---
 

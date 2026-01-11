@@ -87,5 +87,13 @@ class MainActivity : AppCompatActivity(), CameraBridgeViewBase.CvCameraViewListe
 }
 ```
 
+## Step 5: Model Files Setup (Important) ⚠️
+The C++ Core attempts to load `models/MobileNetSSD_deploy.prototxt` by default. On Android, assets are compressed in the APK.
+
+**You must:**
+1.  Copy the `.prototxt` and `.caffemodel` files to your Android device's storage (e.g., `/data/user/0/com.avision.app/files/`).
+2.  **OR** Update `Engine.cpp` or `VisionBridge.cpp` to accept an absolute path and pass it to `objectDetector.init()`.
+3.  The `init(String path)` JNI function signature is already prepared for this!
+
 ## Summary
 You have now bridged the **Exact Same C++ Logic** from `AVision.exe` to an Android App.

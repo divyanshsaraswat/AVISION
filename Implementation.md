@@ -1,10 +1,10 @@
-# Implementation Status: Phase 1 & 2
+# Implementation Status: Universal Core
 
-> **Status**: ✅ Phase 2 Complete (Semantics & Object Detection)
+> **Status**: ✅ Phase 3b Complete (Universal Portability: Android, iOS, Embedded)
 > **Date**: 2026-01-11
-> **Version**: v0.2.0
+> **Version**: v0.4.0
 
-This document details the technical implementation of the A-Vision system as of the "Semantics" release. It covers the architectural decisions, the specific algorithms used, and the build pipeline.
+This document details the technical implementation of the A-Vision system as of the "Universal" release. It covers the architectural decisions, the specific algorithms used, and the build pipeline.
 
 ---
 
@@ -86,13 +86,24 @@ We moved away from manual linking to a modern, reproducible pipeline.
 
 ---
 
+### Phase 3: Platform Portability (`src/platform/android`)
+To run on Android/iOS, we inverted the control loop.
+*   **Refactor**: `Engine` is now passive (`init`, `processFrame`, `stop`). It does not own the loop.
+*   **Android Bridge**: `VisionBridge.cpp` (JNI) exposes the C++ Core to Kotlin/Java.
+*   **Integration**: See `ANDROID_SETUP.md` for compilation instructions on Android Studio.
+
+### Phase 3b: Universal Extensions
+We extended the portable core to support iOS and Embedded Linux.
+*   **iOS**: `src/platform/ios/VisionBridge.mm` uses Objective-C++ to wrap the Engine. It handles `CVPixelBufferRef` locking/unlocking and passes `cv::Mat` to the core.
+*   **Embedded**: `src/platform/embedded/HeadlessRunner.cpp` is a CLI-only application. It reuses `DesktopCamera` but disables all GUI calls (`imshow`). Designed for systemd services.
+
 ## 4. Current Limitations & Next Steps
 
-### Limitations (v0.2.0)
+### Limitations (v0.4.0)
 *   **No Voice**: Objects are detecting but not spoken (TTS not implemented).
 *   **Lighting Sensitivity**: The simple thresholding algorithm struggles in very low light or low contrast.
-*   **Main Thread Blocking**: Image processing and Audio happen sequentially. High-load audio could briefly stall vision.
 
-### Phase 3 Plan (Optimization & Port)
-*   **Voice**: Implement TTS for "Person detected".
-*   **Android Port**: Move the core to an Android NDK project.
+### Phase 4 Plan (Optimization)
+*   **Voice**: Implement TTS.
+*   **Performance**: Profile latency on actual mobile hardware.
+
