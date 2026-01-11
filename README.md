@@ -1,6 +1,11 @@
-# A-Vision: Camera-Based Assistive Vision System
+# 👁️ A-Vision (Assistive Vision System)
 
-A high-performance, safety-critical perception system for visually impaired users. Built with **Modern C++17**, **CMake**, and **OpenCV**, designed to run on low-power edge devices.
+![Version](https://img.shields.io/badge/version-v0.4.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![C++](https://img.shields.io/badge/C%2B%2B-17-blue)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-lightgrey)
+
+**A-Vision** is a high-performance, cross-platform C++ engine designed to assist visually impaired users. Built with **Modern C++17**, **CMake**, and **OpenCV**, designed to run on low-power edge devices.
 
 ---
 
