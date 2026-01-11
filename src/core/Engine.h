@@ -4,6 +4,7 @@
 #include "../platform/interfaces/IAudio.h"
 #include "geometry/GeometryEngine.h"
 #include "distance/DistanceEngine.h"
+#include "semantics/ObjectEngine.h"
 
 class Engine {
 public:
@@ -18,6 +19,7 @@ private:
     
     GeometryEngine geometry;
     DistanceEngine distance; // logic class, static methods
+    ObjectEngine objectDetector;
     
     bool isRunning;
 };

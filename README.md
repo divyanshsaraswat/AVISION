@@ -44,7 +44,13 @@ This project follows a strict **Systems Engineering** approach to ensure safety 
     .\setup_vcpkg.bat
     ```
 
-2.  **Build the System**:
+2.  **Download AI Models (Phase 2)**:
+    Required for Object Detection.
+    ```cmd
+    .\download_models.bat
+    ```
+
+3.  **Build the System**:
     This script configures CMake, downloads OpenCV (if needed), and compiles the Release build.
     ```cmd
     .\build.bat
@@ -86,7 +92,7 @@ AVISION/
 ## 🔮 Roadmap
 
 *   **Phase 1 (Done)**: Portable Core Architecture, Ground/Obstacle Detection, Audio Alerts.
-*   **Phase 2 (In Progress)**: Semantic Understanding (Object Classification).
+*   **Phase 2 (Done)**: Semantic Understanding (MobileNet-SSD Object Detection).
 *   **Phase 3**: Android Port (Create `src/platform/android/` shell).
 
 ---

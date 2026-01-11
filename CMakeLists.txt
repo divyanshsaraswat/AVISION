@@ -17,6 +17,7 @@ set(CORE_SOURCES
     src/core/Engine.cpp
     src/core/geometry/GeometryEngine.cpp
     src/core/distance/DistanceEngine.cpp
+    src/core/semantics/ObjectEngine.cpp
 )
 
 set(PLATFORM_SOURCES
@@ -33,5 +34,12 @@ add_executable(AVision
 target_link_libraries(AVision ${OpenCV_LIBS})
 
 # Copy DLLs handles by vcpkg automatically in many cases, or manual copy needed for release.
-# Removed broken target reference.
+
+# Copy models directory to output (VS creates subfolders like Debug/Release)
+add_custom_command(TARGET AVision POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/models
+    $<TARGET_FILE_DIR:AVision>/models
+    COMMENT "Copying models to output directory"
+)
 

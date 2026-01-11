@@ -16,8 +16,13 @@ void Engine::run() {
     isRunning = true;
     cv::Mat frame, debugFrame;
     
-    std::cout << "Starting A-Vision Engine..." << std::endl;
-    audio->playTone(AudioUrgency::INFO); // Startup beep
+    // Init Object Detection
+    if (!objectDetector.init("models/MobileNetSSD_deploy.prototxt", "models/MobileNetSSD_deploy.caffemodel")) {
+        std::cerr << "Warning: Failed to load MobileNet-SSD. Object detection disabled." << std::endl;
+    }
+
+    int frameCount = 0;
+    std::vector<DetectedObject> cachedObjects;
 
     while (isRunning) {
         auto start = std::chrono::high_resolution_clock::now();
@@ -28,16 +33,21 @@ void Engine::run() {
             break;
         }
 
-        // 2. Core Processing (Geometry Phase)
+        // 2. Core Processing (Geometry Phase) - ALWAYS ON
         geometry.process(frame, debugFrame);
 
-        // 3. Logic & Decision
+        // 3. Semantics Phase (Object Detection) - THROTTLED (Every 5 frames)
+        if (frameCount % 5 == 0) {
+            cachedObjects = objectDetector.detect(frame);
+        }
+        frameCount++;
+
+        // 4. Logic & Decision
+        // A. Geometry Safety (Priority 1)
         if (!geometry.isPathSafe()) {
             // Path blockage!
-            // Find closest obstacle for distance
             const auto& obstacles = geometry.getObstacles();
             if (!obstacles.empty()) {
-                // Get the closest one (highest relative distance value)
                 float maxDist = 0.0f;
                 for (const auto& obs : obstacles) {
                     if (obs.relativeDistance > maxDist) maxDist = obs.relativeDistance;
@@ -45,7 +55,6 @@ void Engine::run() {
                 
                 DistanceCategory cat = DistanceEngine::estimateCategory(maxDist);
                 
-                // Map category to audio
                 if (cat == DistanceCategory::IMMEDIATE) {
                     audio->playTone(AudioUrgency::CRITICAL);
                     cv::putText(debugFrame, "CRITICAL STOP!", cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 3);
@@ -54,12 +63,23 @@ void Engine::run() {
                     cv::putText(debugFrame, "WARNING: OBSTACLE", cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 255), 2);
                 }
             } else {
-                 // Unsafe path but no specific object? Maybe ground gap.
                  audio->playTone(AudioUrgency::WARNING);
             }
         }
 
-        // 4. Visualization (Desktop Shell only)
+        // B. Semantic Feedback (Priority 2)
+        // Show detected objects
+        for (const auto& obj : cachedObjects) {
+            cv::rectangle(debugFrame, obj.boundingBox, cv::Scalar(0, 255, 0), 2);
+            std::string label = obj.label + " " + std::to_string((int)(obj.confidence * 100)) + "%";
+            cv::putText(debugFrame, label, cv::Point(obj.boundingBox.x, obj.boundingBox.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
+            
+            // Simple audio feedback for now (Console log)
+            // In real app: Avoid spamming this. Only speak if new or central.
+             // if (obj.confidence > 0.8) audio->speak(obj.label); 
+        }
+
+        // 5. Visualization (Desktop Shell only)
         cv::imshow("AVision Desktop Debug", debugFrame);
         if (cv::waitKey(1) == 27) { // ESC
             isRunning = false;
