@@ -172,6 +172,87 @@ std::vector<DetectedObject> ObjectEngine::detect(const cv::Mat& frame) {
             results.push_back(obj);
         }
     }
+    else if (currentConfig.type == ModelType::SSD_TF) {
+        // --- TensorFlow SSD Logic (Multi-Head) ---
+        // Expected Outputs: detection_boxes, detection_scores, detection_classes, num_detections
+        // Problem: Layer names vary. Heuristic: Check shapes.
+        
+        std::vector<cv::Mat> outputs;
+        std::vector<std::string> outNames = net.getUnconnectedOutLayersNames();
+        net.forward(outputs, outNames);
+        
+        cv::Mat boxes, scores, classes;
+        
+        // Simple shape heuristic to identify tensors
+        for (const auto& out : outputs) {
+            // boxes: [1, N, 4] or [1, 4, N]
+            if (out.dims == 3 && (out.size[2] == 4 || out.size[1] == 4)) {
+                boxes = out; 
+            }
+            // scores/classes: [1, N]
+            else if (out.dims == 2) {
+                // Heuristic: Scores are float [0-1], classes are often float or int.
+                // It's hard to distinguish perfectly without names. 
+                // Let's assume names contain 'score' or 'box' if valid, otherwise rely on order? 
+                // Reliable Fallback: Most TF exports have fixed order or names. 
+                // Let's rely on standard names if present, or just assume: output[0]=boxes, [1]=classes, [2]=scores
+            }
+        }
+        
+        // Re-run forward with named lookup if possible to be safe
+        // Typical TF names: "detection_boxes", "detection_scores", "detection_classes"
+        // Let's try to find them by substring matching the layer names
+        int boxIdx = -1, scoreIdx = -1, classIdx = -1;
+        for (size_t i=0; i<outNames.size(); i++) {
+            std::string name = outNames[i];
+            if (name.find("box") != std::string::npos) boxIdx = i;
+            else if (name.find("score") != std::string::npos || name.find("conf") != std::string::npos) scoreIdx = i;
+            else if (name.find("class") != std::string::npos) classIdx = i;
+        }
+        
+        if (boxIdx >= 0 && scoreIdx >= 0 && classIdx >= 0) {
+             boxes = outputs[boxIdx];
+             scores = outputs[scoreIdx];
+             classes = outputs[classIdx];
+             
+             // Ensure correct shape [1, N, 4] for boxes
+             if (boxes.dims == 3 && boxes.size[1] == 4) { 
+                 // [1, 4, N] -> [1, N, 4]
+                 cv::Mat t; 
+                 // Transpose logic if needed... usually TF is [1, N, 4] (ymin, xmin, ymax, xmax)
+             }
+             
+             float* boxData = (float*)boxes.data;
+             float* scoreData = (float*)scores.data;
+             float* classData = (float*)classes.data;
+             
+             int numProposals = boxes.size[1]; // Assuming [1, N, 4]
+             
+             for (int i = 0; i < numProposals; i++) {
+                 float score = scoreData[i];
+                 if (score > currentConfig.scoreThreshold) {
+                     // TF Box: [ymin, xmin, ymax, xmax]
+                     float ymin = boxData[i*4 + 0];
+                     float xmin = boxData[i*4 + 1];
+                     float ymax = boxData[i*4 + 2];
+                     float xmax = boxData[i*4 + 3];
+                     
+                     int left =   (int)(xmin * frame.cols);
+                     int top =    (int)(ymin * frame.rows);
+                     int width =  (int)((xmax - xmin) * frame.cols);
+                     int height = (int)((ymax - ymin) * frame.rows);
+                     
+                     DetectedObject obj;
+                     obj.classID = (int)classData[i];
+                     obj.label = getLabel(obj.classID);
+                     obj.confidence = score;
+                     obj.boundingBox = cv::Rect(left, top, width, height) & cv::Rect(0, 0, frame.cols, frame.rows);
+                     
+                     results.push_back(obj);
+                 }
+             }
+        }
+    }
     
     return results;
 }

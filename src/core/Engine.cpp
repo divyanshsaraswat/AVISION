@@ -62,8 +62,9 @@ bool Engine::init() {
             if (!confPath.empty()) config.configPath = confPath;
             
             std::string typeStr = getString("type");
-            if (typeStr == "YOLO_V8") config.type = ObjectEngine::ModelType::YOLO_V8;
-            else config.type = ObjectEngine::ModelType::SSD_MOBILENET;
+            if (typeStr == "SSD_MOBILENET") config.type = ObjectEngine::ModelType::SSD_MOBILENET;
+            else if (typeStr == "SSD_TF") config.type = ObjectEngine::ModelType::SSD_TF;
+            else if (typeStr == "YOLO_V8") config.type = ObjectEngine::ModelType::YOLO_V8;
 
             std::string widthStr = getValue("inputWidth");
             if (!widthStr.empty()) config.inputWidth = std::stoi(widthStr);
@@ -79,6 +80,20 @@ bool Engine::init() {
             
             std::string datasetStr = getString("dataset");
             if (!datasetStr.empty()) config.dataset = datasetStr;
+            
+            std::string meanStr = getString("mean");
+            if (!meanStr.empty()) {
+                // Parse "127.5,127.5,127.5"
+                std::stringstream ss(meanStr);
+                std::string segment;
+                std::vector<float> vals;
+                while(std::getline(ss, segment, ',')) {
+                    vals.push_back(std::stof(segment));
+                }
+                if (vals.size() >= 3) {
+                     config.mean = cv::Scalar(vals[0], vals[1], vals[2]);
+                }
+            }
             
             configLoaded = true;
         }

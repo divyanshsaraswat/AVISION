@@ -10,25 +10,21 @@ echo ========================================================
 echo.
 echo Please select which Object Detection model to use:
 echo.
-echo [1] YOLOv8 Nano (ONNX) - Recommended
-echo     High accuracy, modern, fast (20-30ms)
+echo [1] YOLOv8 Nano (Standard - 640p)
+echo     Best accuracy, standard speed (~5 FPS on CPU)
 echo.
-echo [2] MobileNet V2 SSD FPN-Lite (ONNX)
-echo     Fastest speed, good for very old CPUs
-echo.
-echo [3] MobileNet V1 SSD (Caffe)
+echo [2] MobileNet V1 SSD (Caffe)
 echo     Legacy/Backup option
 echo.
-echo [4] Custom Model
+echo [3] Custom Model
 echo     You provide your own .onnx/.tflite file
 echo.
 
-set /p choice="Enter your choice [1-4]: "
+set /p choice="Enter your choice [1-3]: "
 
 if "%choice%"=="1" goto setup_yolo
-if "%choice%"=="2" goto setup_mobilenet_v2
-if "%choice%"=="3" goto setup_mobilenet_v1
-if "%choice%"=="4" goto setup_custom
+if "%choice%"=="2" goto setup_mobilenet_v1
+if "%choice%"=="3" goto setup_custom
 
 echo Invalid choice. Exiting.
 exit /b 1
@@ -44,19 +40,6 @@ set MODEL_SCALE=0.00392156
 REM Mean 0,0,0
 set MODEL_MEAN=0,0,0
 set SWAP_RB=true
-set DATASET=COCO
-goto download_and_config
-
-:setup_mobilenet_v2
-echo.
-echo [SETUP] Selected MobileNet V2 SSD (ONNX).
-set MODEL_FILE=MobileNet-v2.onnx
-set MODEL_URL=https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/MobileNet-v2.onnx
-set MODEL_TYPE=SSD_MOBILENET
-set INPUT_SIZE=300
-set MODEL_SCALE=1.0
-set MODEL_MEAN=0,0,0
-set SWAP_RB=false
 set DATASET=COCO
 goto download_and_config
 
@@ -86,7 +69,7 @@ echo.
 echo [SETUP] Custom Model.
 echo Please copy your model file into the 'models' folder.
 set /p MODEL_FILE="Enter the filename (e.g. my_model.onnx): "
-set /p MODEL_TYPE="Enter type [SSD_MOBILENET / YOLO_V8]: "
+set /p MODEL_TYPE="Enter type [SSD_MOBILENET / SSD_TF / YOLO_V8]: "
 set /p INPUT_SIZE="Enter input size (e.g. 300 or 640): "
 set MODEL_SCALE=0.007843
 set MODEL_MEAN=127.5,127.5,127.5
@@ -126,6 +109,7 @@ echo   "inputHeight": %INPUT_SIZE%,
 echo   "scale": %MODEL_SCALE%,
 if "%SWAP_RB%"=="true" echo   "swapRB": true,
 if "%SWAP_RB%"=="false" echo   "swapRB": false,
+echo   "mean": "%MODEL_MEAN%",
 echo   "dataset": "%DATASET%"
 echo }
 ) > models/selected_model.json

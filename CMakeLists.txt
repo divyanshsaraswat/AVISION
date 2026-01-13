@@ -53,6 +53,8 @@ add_custom_command(TARGET AVision POST_BUILD
 add_executable(AVisionCLI
     src/video_cli.cpp
     src/core/semantics/ObjectEngine.cpp
+    src/core/geometry/GeometryEngine.cpp
+    src/core/distance/DistanceEngine.cpp
 )
 target_link_libraries(AVisionCLI ${OpenCV_LIBS})
 

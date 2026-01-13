@@ -16,8 +16,9 @@ public:
     ObjectEngine();
     
     enum class ModelType {
-        SSD_MOBILENET,
-        YOLO_V8
+        SSD_MOBILENET,  // Caffe Style [1, 1, N, 7]
+        SSD_TF,         // TensorFlow Style (Multi-head: boxes, scores, classes)
+        YOLO_V8         // Ultralytics Style [1, 84, N]
     };
 
     struct ModelConfig {
