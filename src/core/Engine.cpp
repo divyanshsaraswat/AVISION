@@ -77,6 +77,9 @@ bool Engine::init() {
             std::string swapStr = getValue("swapRB");
             if (swapStr.find("true") != std::string::npos) config.swapRB = true;
             
+            std::string datasetStr = getString("dataset");
+            if (!datasetStr.empty()) config.dataset = datasetStr;
+            
             configLoaded = true;
         }
     }

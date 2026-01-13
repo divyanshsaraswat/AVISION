@@ -43,5 +43,18 @@ add_custom_command(TARGET AVision POST_BUILD
     COMMENT "Copying models to output directory"
 )
 
+add_custom_command(TARGET AVision POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${CMAKE_SOURCE_DIR}/download_models.bat
+    $<TARGET_FILE_DIR:AVision>/download_models.bat
+    COMMENT "Copying setup script to output directory"
+)
+
+add_executable(AVisionCLI
+    src/video_cli.cpp
+    src/core/semantics/ObjectEngine.cpp
+)
+target_link_libraries(AVisionCLI ${OpenCV_LIBS})
+
 
 

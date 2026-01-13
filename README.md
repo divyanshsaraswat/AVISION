@@ -1,6 +1,6 @@
 # A-Vision (Assistive Vision System)
 
-![Version](https://img.shields.io/badge/version-v0.4.0-blue)
+![Version](https://img.shields.io/badge/version-v0.5.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-lightgrey)
@@ -55,9 +55,9 @@ This project follows a strict **Systems Engineering** approach to ensure safety 
 
 2.  **Download AI Models (Phase 2)**:
     Required for Object Detection.
-    ```cmd
     .\download_models.bat
     ```
+    *Note: This is now an interactive wizard! Follow the prompts to select your preferred model (YOLOv8, MobileNet, etc).*
 
 3.  **Build the System**:
     This script configures CMake, downloads OpenCV (if needed), and compiles the Release build.
@@ -70,6 +70,12 @@ This project follows a strict **Systems Engineering** approach to ensure safety 
     ```cmd
     build\Release\AVision.exe
     ```
+
+### 🎥 Video Analysis (New)
+You can now process video files directly using the new CLI tool:
+```cmd
+build\Release\AVisionCLI.exe --video "path/to/video.mp4"
+```
 
 ### 🧹 Disk Space Management
 Building from source creates large intermediate files (~8GB). To reclaim space after a successful build:
@@ -121,9 +127,9 @@ make
 ## 🔮 Roadmap
 
 *   **Phase 1 (Done)**: Portable Core Architecture, Ground/Obstacle Detection, Audio Alerts.
-*   **Phase 2 (Done)**: Semantic Understanding (MobileNet-SSD Object Detection).
+*   **Phase 2 (Done)**: Semantic Understanding (Generic Engine: YOLOv8 / SSD).
 *   **Phase 3 (Done)**: Platform Portability (Android JNI Bridge & Passive Core Refactor).
-*   **Phase 4**: Optimization (Threading, Quantization).
+*   **Phase 4 (In Progress)**: Video Analysis CLI & Optimization.
 
 ---
 

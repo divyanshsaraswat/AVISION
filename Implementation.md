@@ -1,8 +1,8 @@
 # Implementation Status: Universal Core
 
-> **Status**: ✅ Phase 3b Complete (Universal Portability: Android, iOS, Embedded)
-> **Date**: 2026-01-11
-> **Version**: v0.4.0
+> **Status**: ✅ Phase 3b Complete (Universal Portability) + 🚧 Phase 4 (Optimization/Video)
+> **Date**: 2026-01-13
+> **Version**: v0.5.0
 
 This document details the technical implementation of the A-Vision system as of the "Universal" release. It covers the architectural decisions, the specific algorithms used, and the build pipeline.
 
@@ -52,13 +52,19 @@ Without a depth sensor, we use **Monocular Cues (Perspective)**.
     *   **FAR**: < 60% (Info/Ignore).
 
 ### Object Detection (`ObjectEngine.cpp`)
-We integrated semantic understanding using Lightweight Edge AI.
-*   **Model**: MobileNet-SSD (Single Shot Detector).
-*   **Classes**: 20 standard objects (Person, Chair, Car, Bottle, etc.).
+We upgraded to a **Generic Inference Engine** supporting multiple architectures.
+*   **Models Supported**:
+    *   **YOLOv8 Nano** (ONNX): High accuracy, modern architecture.
+    *   **MobileNet-SSD** (V1/V2): Ultra-lightweight legacy support.
+*   **Format Support**: `.onnx`, `.tflite`, `.caffemodel` (Auto-detected).
+*   **Configuration**: Runtime configurable via `selected_model.json`.
+    *   **Preprocessing**: Configurable Input Size (300x300, 640x640), Mean, Scale.
+    *   **Post-processing**:
+        *   **SSD**: Standard 4D tensor parsing.
+        *   **YOLO**: Flattening, Transposition, and NMS (Non-Maximum Suppression).
 *   **Integration**:
     *   **Throttling**: Inference runs every 5 frames to maintain high FPS for safety logic.
-    *   **Confidence**: Only detections > 50% are accepted.
-    *   **Visualization**: Bounding boxes and labels overlaid on debug frame.
+    *   **Confidence**: Thresholds defined in config (Default > 50%).
 
 ### Audio Feedback Loop
 The system uses a "Silence by Default" philosophy, alerting only on positive detection.

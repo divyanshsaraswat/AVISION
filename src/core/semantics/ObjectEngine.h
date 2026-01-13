@@ -33,6 +33,9 @@ public:
         float scale = 1.0f / 127.5f;
         cv::Scalar mean = cv::Scalar(127.5, 127.5, 127.5);
         bool swapRB = false;
+        
+        // Labels
+        std::string dataset = "VOC"; // "VOC" or "COCO"
     };
 
     // Load model from config

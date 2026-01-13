@@ -44,6 +44,7 @@ set MODEL_SCALE=0.00392156
 REM Mean 0,0,0
 set MODEL_MEAN=0,0,0
 set SWAP_RB=true
+set DATASET=COCO
 goto download_and_config
 
 :setup_mobilenet_v2
@@ -56,6 +57,7 @@ set INPUT_SIZE=300
 set MODEL_SCALE=1.0
 set MODEL_MEAN=0,0,0
 set SWAP_RB=false
+set DATASET=COCO
 goto download_and_config
 
 :setup_mobilenet_v1
@@ -70,6 +72,7 @@ set INPUT_SIZE=300
 set MODEL_SCALE=0.007843
 set MODEL_MEAN=127.5,127.5,127.5
 set SWAP_RB=false
+set DATASET=VOC
 
 REM Download Config separately
 if not exist "models\%CONFIG_FILE%" (
@@ -88,10 +91,12 @@ set /p INPUT_SIZE="Enter input size (e.g. 300 or 640): "
 set MODEL_SCALE=0.007843
 set MODEL_MEAN=127.5,127.5,127.5
 set SWAP_RB=false
+set DATASET=VOC
 if "%MODEL_TYPE%"=="YOLO_V8" (
     set MODEL_SCALE=0.00392156
     set MODEL_MEAN=0,0,0
     set SWAP_RB=true
+    set DATASET=COCO
 )
 goto write_config
 
@@ -120,7 +125,8 @@ echo   "inputWidth": %INPUT_SIZE%,
 echo   "inputHeight": %INPUT_SIZE%,
 echo   "scale": %MODEL_SCALE%,
 if "%SWAP_RB%"=="true" echo   "swapRB": true,
-if "%SWAP_RB%"=="false" echo   "swapRB": false
+if "%SWAP_RB%"=="false" echo   "swapRB": false,
+echo   "dataset": "%DATASET%"
 echo }
 ) > models/selected_model.json
 
