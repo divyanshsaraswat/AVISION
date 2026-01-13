@@ -5,7 +5,9 @@
 ![C++](https://img.shields.io/badge/C%2B%2B-17-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-lightgrey)
 
-<img width="2304" height="1856" alt="avision" src="https://github.com/user-attachments/assets/53ebe291-3656-4c6d-abdf-e096f81856c1" />
+
+<img width="2304" height="1856" alt="Gemini_Generated_Image_u2xzr3u2xzr3u2xz" src="https://github.com/user-attachments/assets/839f25f2-71ff-4d0a-83b8-d9ddcb70f359" />
+
 
 **A-Vision** is a high-performance, cross-platform C++ engine designed to assist visually impaired users. Built with **Modern C++17**, **CMake**, and **OpenCV**, designed to run on low-power edge devices.
 
