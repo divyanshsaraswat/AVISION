@@ -16,12 +16,84 @@ bool Engine::init() {
         return false;
     }
 
-    // Init Object Detection
-    // Note: On Android, paths will be different. We will handle assets differently in Phase 3b.
-    // For now, assume relative path or passed in config.
-    if (!objectDetector.init("models/MobileNetSSD_deploy.prototxt", "models/MobileNetSSD_deploy.caffemodel")) {
-        std::cerr << "Warning: Failed to load MobileNet-SSD. Object detection disabled." << std::endl;
-        // return true; // Use true even if strict warning, so app doesn't crash on geometry-only
+    // 3. Init Object Detection from Config
+    ObjectEngine::ModelConfig config;
+    bool configLoaded = false;
+    
+    // Try to load models/selected_model.json
+    FILE* fp = fopen("models/selected_model.json", "r");
+    if (fp) {
+        char buffer[1024];
+        std::string jsonContent;
+        while (fgets(buffer, 1024, fp)) {
+            jsonContent += buffer;
+        }
+        fclose(fp);
+        
+        // Simple manual JSON parsing (Dependency-free)
+        // Helper lambda to extract string value
+        auto getString = [&](const std::string& key) -> std::string {
+            std::string search = "\"" + key + "\":";
+            size_t pos = jsonContent.find(search);
+            if (pos == std::string::npos) return "";
+            pos = jsonContent.find("\"", pos + search.length()); 
+            if (pos == std::string::npos) return "";
+            size_t end = jsonContent.find("\"", pos + 1);
+            return jsonContent.substr(pos + 1, end - pos - 1);
+        };
+
+        // Helper lambda to extract int/float/bool
+        auto getValue = [&](const std::string& key) -> std::string {
+             std::string search = "\"" + key + "\":";
+             size_t pos = jsonContent.find(search);
+             if (pos == std::string::npos) return "";
+             pos += search.length();
+             while (pos < jsonContent.length() && (isspace(jsonContent[pos]))) pos++; // trim leading
+             size_t end = pos;
+             while (end < jsonContent.length() && jsonContent[end] != ',' && jsonContent[end] != '}' && !isspace(jsonContent[end])) end++;
+             return jsonContent.substr(pos, end - pos);
+        };
+
+        std::string modelFile = getString("modelPath");
+        if (!modelFile.empty()) {
+            std::cout << "[Engine] Loading config from models/selected_model.json" << std::endl;
+            config.modelPath = modelFile;
+            std::string confPath = getString("configPath");
+            if (!confPath.empty()) config.configPath = confPath;
+            
+            std::string typeStr = getString("type");
+            if (typeStr == "YOLO_V8") config.type = ObjectEngine::ModelType::YOLO_V8;
+            else config.type = ObjectEngine::ModelType::SSD_MOBILENET;
+
+            std::string widthStr = getValue("inputWidth");
+            if (!widthStr.empty()) config.inputWidth = std::stoi(widthStr);
+            
+            std::string heightStr = getValue("inputHeight");
+            if (!heightStr.empty()) config.inputHeight = std::stoi(heightStr);
+            
+            std::string scaleStr = getValue("scale");
+            if (!scaleStr.empty()) config.scale = std::stof(scaleStr);
+            
+            std::string swapStr = getValue("swapRB");
+            if (swapStr.find("true") != std::string::npos) config.swapRB = true;
+            
+            configLoaded = true;
+        }
+    }
+
+    if (!configLoaded) {
+        std::cout << "[Engine] No config found. Fallback to legacy default." << std::endl;
+        // Fallback defaults
+        config.modelPath = "models/MobileNetSSD_deploy.caffemodel";
+        config.configPath = "models/MobileNetSSD_deploy.prototxt";
+        config.type = ObjectEngine::ModelType::SSD_MOBILENET;
+    }
+
+    if (!objectDetector.init(config)) {
+        std::cerr << "Warning: Failed to load Object Detection Model (" << config.modelPath << ")." << std::endl;
+        std::cerr << "Please run 'download_models.bat' to setup a model." << std::endl;
+    } else {
+        std::cout << "[Engine] Object Detection initialized: " << config.modelPath << std::endl;
     }
     isRunning = true;
     frameCount = 0;

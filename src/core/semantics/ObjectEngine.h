@@ -15,7 +15,30 @@ class ObjectEngine {
 public:
     ObjectEngine();
     
-    // Load model from file path
+    enum class ModelType {
+        SSD_MOBILENET,
+        YOLO_V8
+    };
+
+    struct ModelConfig {
+        std::string modelPath;
+        std::string configPath; // Optional (for Caffe)
+        ModelType type = ModelType::SSD_MOBILENET;
+        int inputWidth = 300;
+        int inputHeight = 300;
+        float scoreThreshold = 0.5f;
+        float nmsThreshold = 0.45f;
+        
+        // Preprocessing
+        float scale = 1.0f / 127.5f;
+        cv::Scalar mean = cv::Scalar(127.5, 127.5, 127.5);
+        bool swapRB = false;
+    };
+
+    // Load model from config
+    bool init(const ModelConfig& config);
+
+    // Legacy support (optional, can be removed if not used)
     bool init(const std::string& prototxt, const std::string& model);
     
     // Run detection on a frame
@@ -28,4 +51,5 @@ private:
     cv::dnn::Net net;
     std::vector<std::string> classNames;
     bool isInitialized;
+    ModelConfig currentConfig;
 };

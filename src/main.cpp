@@ -7,6 +7,19 @@
 
 int main() {
     try {
+        // 0. Runtime Model Setup
+        // Check if config exists, if not, launch setup wizard
+        struct stat buffer;
+        if (stat("models/selected_model.json", &buffer) != 0) {
+            std::cout << "[AVision] First run detected. Launching Model Setup..." << std::endl;
+            // Launch the batch script
+            int result = system("download_models.bat");
+            if (result != 0) {
+                std::cerr << "[AVision] Setup failed or cancelled." << std::endl;
+                return 1;
+            }
+        }
+
         // 1. Init Platform Layer (The "Body")
         auto camera = std::make_shared<DesktopCamera>(0); // Default webcam
         auto audio = std::make_shared<DesktopAudio>();
