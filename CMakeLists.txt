@@ -18,6 +18,7 @@ set(CORE_SOURCES
     src/core/geometry/GeometryEngine.cpp
     src/core/distance/DistanceEngine.cpp
     src/core/semantics/ObjectEngine.cpp
+    src/core/depth/DepthEngine.cpp
 )
 
 set(PLATFORM_SOURCES
@@ -55,6 +56,7 @@ add_executable(AVisionCLI
     src/core/semantics/ObjectEngine.cpp
     src/core/geometry/GeometryEngine.cpp
     src/core/distance/DistanceEngine.cpp
+    src/core/depth/DepthEngine.cpp
 )
 target_link_libraries(AVisionCLI ${OpenCV_LIBS})
 

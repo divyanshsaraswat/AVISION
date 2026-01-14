@@ -6,7 +6,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-lightgrey)
 
 
-<img width="2304" height="1856" alt="Gemini_Generated_Image_u2xzr3u2xzr3u2xz" src="https://github.com/user-attachments/assets/839f25f2-71ff-4d0a-83b8-d9ddcb70f359" />
+<img width="2304" height="1856" alt="A-Vision (Assistive Vision System)" src="https://github.com/user-attachments/assets/839f25f2-71ff-4d0a-83b8-d9ddcb70f359" />
 
 
 **A-Vision** is a high-performance, cross-platform C++ engine designed to assist visually impaired users. Built with **Modern C++17**, **CMake**, and **OpenCV**, designed to run on low-power edge devices.
@@ -72,10 +72,16 @@ This project follows a strict **Systems Engineering** approach to ensure safety 
     ```
 
 ### 🎥 Video Analysis (New)
-You can now process video files directly using the new CLI tool:
+You can now process video files directly using the new CLI tool. This output includes **Object Detection** fused with **Depth Estimation**.
+
 ```cmd
 build\Release\AVisionCLI.exe --video "path/to/video.mp4"
 ```
+
+**Features:**
+*   **Dual-Rate Processing**: Detects objects at ~10 FPS, estimates depth at 1 FPS (Optimized).
+*   **Depth Heatmap**: Visualizes user's distance to environment.
+*   **Safety Fusion**: Color-codes objects (Red/Green) based on physical proximity.
 
 ### 🧹 Disk Space Management
 Building from source creates large intermediate files (~8GB). To reclaim space after a successful build:
@@ -129,7 +135,8 @@ make
 *   **Phase 1 (Done)**: Portable Core Architecture, Ground/Obstacle Detection, Audio Alerts.
 *   **Phase 2 (Done)**: Semantic Understanding (Generic Engine: YOLOv8 / SSD).
 *   **Phase 3 (Done)**: Platform Portability (Android JNI Bridge & Passive Core Refactor).
-*   **Phase 4 (In Progress)**: Video Analysis CLI & Optimization.
+*   **Phase 4 (Done)**: Video Analysis CLI & Optimization.
+*   **Phase 5 (Done)**: Depth Estimation Integration (MiDaS) & Safety Fusion.
 
 ---
 

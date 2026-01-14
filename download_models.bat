@@ -114,9 +114,23 @@ echo   "dataset": "%DATASET%"
 echo }
 ) > models/selected_model.json
 
-REM Fix JSON generic mean (Hard to print array in batch, simplistic approach)
-REM We will let the Engine default mean if missing, or use a simpler sed approach if needed.
-REM For now, allow Engine to handle defaults if mean is missing from JSON.
+echo.
+echo [SETUP] Verifying/Downloading Depth Estimation Model...
+set DEPTH_FILE=midas-v2_1-small-192x256.onnx
+set DEPTH_URL=https://github.com/isl-org/MiDaS/releases/download/v2_1/model-small.onnx
+
+if exist "models\%DEPTH_FILE%" (
+    echo [INFO] Depth model %DEPTH_FILE% already exists.
+) else (
+    echo [DOWNLOAD] Downloading Depth Model %DEPTH_FILE%...
+    curl -L -o models/%DEPTH_FILE% %DEPTH_URL%
+    if !errorlevel! neq 0 (
+        echo [ERROR] Failed to download Depth Model.
+        echo         Depth estimation features will be disabled.
+    ) else (
+        echo [SUCCESS] Depth model downloaded.
+    )
+)
 
 echo.
 echo [SUCCESS] Setup complete!

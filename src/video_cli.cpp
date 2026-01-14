@@ -7,6 +7,7 @@
 #include "core/semantics/ObjectEngine.h"
 #include "core/geometry/GeometryEngine.h"
 #include "core/distance/DistanceEngine.h"
+#include "core/depth/DepthEngine.h"
 
 // Simple config loader (Duplicated from Engine.cpp for standalone simplicity, 
 // or ideally we refactor ConfigLoader to a valid util)
@@ -141,13 +142,28 @@ int main(int argc, char** argv) {
         std::cerr << "Warning: Could not create result.txt" << std::endl;
     }
 
-    // 3. Initialize Geometry Engine
+    // 3. Initialize Geometry & Depth Engine
     GeometryEngine geometry;
+    DepthEngine depthEngine;
+    bool depthLoaded = depthEngine.init("models/midas-v2_1-small-192x256.onnx");
+    if (depthLoaded) {
+        std::cout << "[AVisionCLI] Depth Engine initialized successfully." << std::endl;
+    } else {
+         std::cerr << "[AVisionCLI] WARNING: Failed to initialize Depth Engine. Depth view will be disabled." << std::endl;
+    }
 
     cv::Mat frame;
     double fps = cap.get(cv::CAP_PROP_FPS);
     int frameIdx = 0;
+    int detectInterval = 3;  // Run detection every 3 frames (~10 FPS)
+    int depthInterval = (fps > 0) ? (int)fps : 30; // Run depth once per second (1 FPS)
+    
+    // Persistent caches for dual-rate processing
+    std::vector<DetectedObject> cachedObjects;
+    cv::Mat cachedDepthMap;
+    double cachedMaxDepth = 1.0;
 
+    std::cout << "[AVisionCLI] Rates -> Detection: Every " << detectInterval << " frames. Depth: Every " << depthInterval << " frames." << std::endl;
     std::cout << "[AVisionCLI] Starting inference... Press ESC to stop." << std::endl;
     std::cout << "-----------------------------------------------------" << std::endl;
 
@@ -155,15 +171,41 @@ int main(int argc, char** argv) {
         // Calculate timestamp
         double timestampSec = frameIdx / (fps > 0 ? fps : 30.0);
         
-        // 1. Detect Objects (on raw frame)
-        std::vector<DetectedObject> objects = engine.detect(frame);
+        // 1. Detect Objects (Fast Interval)
+        if (frameIdx % detectInterval == 0) {
+             cachedObjects = engine.detect(frame);
+        }
 
-        // 2. Process Geometry (Safe zones, Obstacles)
+        // 2. Process Geometry
         cv::Mat debugFrame;
+        // Always draw frame
         geometry.process(frame, debugFrame);
-        // debugFrame now contains the geometry visualization (Safe Zone colors, Obstacle boxes)
 
-        // 3. Check Safety / Collision Logic
+        // 3. Process Depth (Slow Interval)
+        if (depthLoaded && frameIdx % depthInterval == 0) {
+            cachedDepthMap = depthEngine.estimateDepth(frame);
+            if (!cachedDepthMap.empty()) {
+                cachedMaxDepth = 0.0;
+                cv::minMaxLoc(cachedDepthMap, nullptr, &cachedMaxDepth);
+                if (cachedMaxDepth <= 0.0001) cachedMaxDepth = 1.0;
+            }
+        }
+        
+        // Visualization: Use Cached Depth Map for side-by-side
+        if (depthLoaded && !cachedDepthMap.empty()) {
+             // We need to clone or reuse the map for visualization
+             cv::Mat vizDepth = cachedDepthMap.clone(); // Clone to avoid modifying cache during viz
+             double minVal, maxVal;
+             cv::minMaxLoc(vizDepth, &minVal, &maxVal);
+             if (maxVal > minVal) {
+                    vizDepth.convertTo(vizDepth, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
+                    cv::applyColorMap(vizDepth, vizDepth, cv::COLORMAP_MAGMA);
+                    cv::resize(vizDepth, vizDepth, cv::Size(vizDepth.cols * debugFrame.rows / vizDepth.rows, debugFrame.rows));
+                    cv::hconcat(debugFrame, vizDepth, debugFrame);
+             }
+        }
+
+        // 4. Check Safety / Collision Logic
         if (!geometry.isPathSafe()) {
             const auto& obstacles = geometry.getObstacles();
             if (!obstacles.empty()) {
@@ -174,43 +216,53 @@ int main(int argc, char** argv) {
                 
                 DistanceCategory cat = DistanceEngine::estimateCategory(maxDist);
                 
-                std::string warningText = "";
-                cv::Scalar warningColor(0, 255, 0); // Default Green (Safe-ish)
-
                 if (cat == DistanceCategory::IMMEDIATE) {
-                    warningText = "CRITICAL STOP!";
-                    warningColor = cv::Scalar(0, 0, 255); // Red
+                    cv::putText(debugFrame, "CRITICAL STOP!", cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 3);
                 } else if (cat == DistanceCategory::NEAR) {
-                    warningText = "WARNING: OBSTACLE";
-                    warningColor = cv::Scalar(0, 255, 255); // Yellow
-                }
-                
-                if (!warningText.empty()) {
-                    cv::putText(debugFrame, warningText, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1, warningColor, 3);
+                    cv::putText(debugFrame, "WARNING: OBSTACLE", cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 255), 2);
                 }
             } else {
-                 // Path not safe but no specific obstacle identified (e.g. rough terrain/edges)
                  cv::putText(debugFrame, "WARNING: UNSAFE PATH", cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 165, 255), 2);
             }
         }
 
-        // 4. Log & Draw Object Detections (on top of geometry viz)
-        for (const auto& obj : objects) {
-            // Console
-            std::cout << "[" << std::fixed << std::setprecision(2) << timestampSec << "s] "
-                      << "Detected: " << obj.label << " (" << int(obj.confidence * 100) << "%)" << std::endl;
+        // 5. Log & Draw Object Detections (Using Cached Data)
+        for (auto& obj : cachedObjects) {
+            std::string distanceStr = "";
+            cv::Scalar color = cv::Scalar(0, 255, 0); // Green (Safe)
             
-            // File
-            if (outFile.is_open()) {
-                outFile << "[" << std::fixed << std::setprecision(2) << timestampSec << "s] "
-                        << "Detected: " << obj.label << " (" << int(obj.confidence * 100) << "%)" << std::endl;
+            // FUSE DEPTH (Using Cached Map)
+            if (depthLoaded && !cachedDepthMap.empty()) {
+                   // Clamp ROI to map size
+                   cv::Rect safeBox = obj.boundingBox & cv::Rect(0, 0, cachedDepthMap.cols, cachedDepthMap.rows);
+                   if (safeBox.area() > 0) {
+                       cv::Scalar meanDepth = cv::mean(cachedDepthMap(safeBox));
+                       
+                       float relativeDepth = (float)meanDepth[0] / (float)cachedMaxDepth; 
+                       
+                       distanceStr = " D:" + std::to_string((int)(relativeDepth * 100)) + "%";
+
+                       if (relativeDepth > 0.6f) {
+                           color = cv::Scalar(0, 0, 255); // Red
+                           distanceStr += " [CLOSE]";
+                       } else if (relativeDepth > 0.4f) {
+                           color = cv::Scalar(0, 255, 255); // Yellow
+                       }
+                   }
             }
 
+            // Console (Only log on update frames to avoid spamming)
+            if (frameIdx % detectInterval == 0) {
+                std::cout << "[" << std::fixed << std::setprecision(2) << timestampSec << "s] "
+                          << "Detected: " << obj.label << " (" << int(obj.confidence * 100) << "%)" 
+                          << distanceStr << std::endl;
+            }
+            
             // Draw
-            cv::rectangle(debugFrame, obj.boundingBox, cv::Scalar(0, 255, 0), 2);
-            std::string label = obj.label + " " + std::to_string((int)(obj.confidence * 100)) + "%";
+            cv::rectangle(debugFrame, obj.boundingBox, color, 2);
+            std::string label = obj.label + " " + std::to_string((int)(obj.confidence * 100)) + "%" + distanceStr;
             cv::putText(debugFrame, label, cv::Point(obj.boundingBox.x, obj.boundingBox.y - 10), 
-                        cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
+                        cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
         }
 
         cv::imshow("AVision Video CLI", debugFrame);
