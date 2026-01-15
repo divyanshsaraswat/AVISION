@@ -13,7 +13,7 @@
 
 ---
 
-## � Table of Contents
+## Table of Contents
 - [🚀 Getting Started](#-getting-started)
 - [🧠 System Architecture: "Portable Core"](#-system-architecture-portable-core)
 - [🔬 Deep Dive: Algorithms & Logic](#-deep-dive-algorithms--logic)
@@ -24,7 +24,7 @@
 
 ---
 
-## �🚀 Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 *   **Git**: Version control.
