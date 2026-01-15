@@ -1,0 +1,53 @@
+{
+    "modules": [
+        {
+            "name": "GeometryModule",
+            "enabled": true,
+            "params": {
+                "safeZoneThreshold": "0.7"
+            }
+        },
+        {
+            "name": "ObjectModule",
+            "enabled": true,
+            "params": {
+                "modelPath": "models/MobileNetSSD_deploy.caffemodel",
+                "configPath": "models/MobileNetSSD_deploy.prototxt",
+                "threshold": "0.1",
+                "eachFrame": "true"
+            }
+        },
+        {
+            "name": "DepthModule",
+            "enabled": true,
+            "params": {
+                "modelPath": "models/midas-v2_1-small-192x256.onnx",
+                "eachFrame": "false",
+                "interval": "30"
+            }
+        },
+        {
+            "name": "TemporalModule",
+            "enabled": true,
+            "params": {
+                "windowSize": "5",
+                "decay": "0.85"
+            }
+        },
+        {
+            "name": "FreeSpaceModule",
+            "enabled": true,
+            "params": {
+                "sectors": "3",
+                "minClearance": "1.0"
+            }
+        },
+        {
+            "name": "EdgeSafetyModule",
+            "enabled": true,
+            "params": {
+                "gradientThreshold": "0.25"
+            }
+        }
+    ]
+}

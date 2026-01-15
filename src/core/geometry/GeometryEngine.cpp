@@ -3,6 +3,17 @@
 
 GeometryEngine::GeometryEngine() : pathSafe(true) {}
 
+void GeometryEngine::process(Context& ctx) {
+    if (ctx.rawFrame.empty()) return;
+    
+    // Use the overlay from context
+    process(ctx.rawFrame, ctx.debugOverlay);
+    
+    // Copy results to Context
+    ctx.isPathSafe = isPathSafe();
+    ctx.obstacles = getObstacles();
+}
+
 void GeometryEngine::process(const cv::Mat& inputFrame, cv::Mat& debugFrame) {
     if (inputFrame.empty()) return;
 

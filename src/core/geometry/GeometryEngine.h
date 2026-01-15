@@ -2,15 +2,18 @@
 #include <opencv2/core.hpp>
 #include <vector>
 
-struct Obstacle {
-    cv::Rect boundingBox;
-    float relativeDistance; // 0.0 (far) to 1.0 (close)
-    bool isDanger;
-};
+// Obstacle is now in Context.h
 
-class GeometryEngine {
+#include "../kernel/IModule.h"
+
+class GeometryEngine : public IModule {
 public:
     GeometryEngine();
+
+    // IModule Implementation
+    bool init(const std::map<std::string, std::string>& params) override { return true; } // Params unused for now
+    void process(Context& ctx) override;
+    std::string getName() const override { return "GeometryModule"; }
     
     // Main processing function
     void process(const cv::Mat& inputFrame, cv::Mat& debugFrame);

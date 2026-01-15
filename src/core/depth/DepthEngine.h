@@ -3,20 +3,35 @@
 #include <opencv2/core.hpp>
 #include <string>
 
-class DepthEngine {
+#include "../kernel/IModule.h"
+
+class DepthEngine : public IModule {
 public:
     DepthEngine();
     
-    // Load the ONNX model
+    // IModule Implementation
+    bool init(const std::map<std::string, std::string>& params) override; 
+    void process(Context& ctx) override;
+    std::string getName() const override { return "DepthModule"; }
+
+    // Init with specific path (legacy/manual)
     bool init(const std::string& modelPath);
     
-    // Returns a CV_32F depth map (normalized 0..1 typically, or relative inverse depth)
-    // Input should be the raw BGR frame from camera/video
+    // Legacy direct call
     cv::Mat estimateDepth(const cv::Mat& inputFrame);
 
 private:
     cv::dnn::Net net;
     bool isInitialized;
+    
+    // Config
+    bool processEveryFrame = true;
+    int skipInterval = 30; // Depth is heavy, default slow
+    int internalFrameCount = 0;
+    
+    // State Cache for Throttling
+    cv::Mat cachedDepthMap;
+    std::string cachedAlert;
     
     // Config matches "MiDaS v2.1 Small" (Standard 256x256)
     const int inputWidth = 256;

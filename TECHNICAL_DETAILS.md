@@ -73,7 +73,22 @@ The "Safety Layer". Uses classical Computer Vision (no AI) for determinism and s
     *   **Height Filter**: Ignore contours in the top half of the screen (`y + h < rows/2`).
 *   **Output**: Bounding Box + Relative Distance.
 
----
+*   **Output**: Bounding Box + Relative Distance.
+
+### 2.3 New Safety Modules
+#### Temporal Module
+*   **Window Size**: `5` frames.
+*   **Decay Factor**: `0.85` (Confidence decay per missing frame).
+*   **Matching Threshold**: `IoU > 0.3`.
+
+#### Free Space Module
+*   **Sectors**: `3` (Left, Center, Right).
+*   **Min Clearance**: `1.0` (Generic unit based on depth map scale).
+
+#### Edge Safety Module
+*   **Gradient Threshold**: `0.25` (Relative to depth range).
+*   **ROI**: Bottom `40%` of the frame.
+*   **Algorithm**: Sobel operator (Y-direction) on depth map.
 
 ## 3. Distance Engine (`src/core/distance/DistanceEngine.h`)
 

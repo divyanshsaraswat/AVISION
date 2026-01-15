@@ -4,6 +4,13 @@ if not exist "vcpkg" (
     exit /b 1
 )
 
+echo [SETUP] Checking and downloading models...
+powershell -ExecutionPolicy Bypass -File setup_models.ps1
+if %errorlevel% neq 0 (
+    echo [ERROR] Model setup failed.
+    exit /b 1
+)
+
 echo [BUILD] Configuring project with vcpkg toolchain...
 cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
 

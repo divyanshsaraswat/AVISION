@@ -50,6 +50,54 @@ bool ObjectEngine::init(const ModelConfig& config) {
     }
 }
 
+// IModule Implementation
+// IModule Implementation
+bool ObjectEngine::init(const std::map<std::string, std::string>& params) {
+    // Default config
+    ModelConfig config;
+    config.modelPath = "models/MobileNetSSD_deploy.caffemodel";
+    config.configPath = "models/MobileNetSSD_deploy.prototxt";
+    config.type = ModelType::SSD_MOBILENET;
+    
+    // Override from Params
+    if (params.count("modelPath")) config.modelPath = params.at("modelPath");
+    if (params.count("configPath")) config.configPath = params.at("configPath");
+    if (params.count("threshold")) config.scoreThreshold = std::stof(params.at("threshold"));
+    
+    // Throttling Params
+    if (params.count("eachFrame")) {
+        std::string val = params.at("eachFrame");
+        processEveryFrame = (val == "true" || val == "1");
+    }
+    if (params.count("interval")) {
+        skipInterval = std::stoi(params.at("interval"));
+    }
+    
+    return init(config);
+}
+
+void ObjectEngine::process(Context& ctx) {
+    if (!isInitialized || ctx.rawFrame.empty()) return;
+    
+    internalFrameCount++;
+    
+    if (!processEveryFrame) {
+        if (internalFrameCount % skipInterval != 0) return;
+    }
+
+    double t_start = (double)cv::getTickCount();
+    
+    ctx.detections = detect(ctx.rawFrame);
+    
+    double t_end = (double)cv::getTickCount();
+    double time_ms = ((t_end - t_start) / cv::getTickFrequency()) * 1000.0;
+    
+    if (!processEveryFrame) {
+         // Only log if we are in "profiling/throttled" mode to avoid spamming 30fps
+         std::cout << "[ObjectModule] Inference Time: " << time_ms << " ms. Detections: " << ctx.detections.size() << std::endl;
+    }
+}
+
 // Legacy support
 bool ObjectEngine::init(const std::string& prototxt, const std::string& model) {
     ModelConfig config;

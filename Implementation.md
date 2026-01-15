@@ -19,6 +19,9 @@ To meet the requirement of running on **any edge device** (Android, iOS, Embedde
 *   **Modules**:
     *   `src/core/geometry/GeometryEngine.cpp`: Ground/Obstacle logic.
     *   `src/core/semantics/ObjectEngine.cpp`: Neural Network wrapper (OpenCV DNN).
+    *   `src/core/semantics/TemporalModule.cpp`: Object tracking and smoothing.
+    *   `src/core/geometry/FreeSpaceModule.cpp`: Depth-based navigation logic.
+    *   `src/core/geometry/EdgeSafetyModule.cpp`: Drop-off and curb detection.
     *   `src/core/Engine.cpp`: Main orchestration loop.
 
 ### The "Platform" (`src/platform/`)
@@ -71,6 +74,26 @@ The system uses a "Silence by Default" philosophy, alerting only on positive det
 *   **CRITICAL**: High-pitch beep (Frequency 2000Hz).
 *   **WARNING**: Mid-pitch beep (Frequency 1000Hz).
 *   **INFO**: Low-pitch beep (Startup/Status).
+
+### Advanced Safety Modules (New)
+#### Temporal Stabilization (`TemporalModule.cpp`)
+*   **Goal**: Reduce jitter in object detection.
+*   **Logic**: Tracks objects across frames using IoU (Intersection over Union).
+    *   **Smoothing**: Averages bounding box coordinates over a sliding window (default N=5).
+    *   **Persistence**: Keeps tracking objects even if missed for a few frames (decay logic).
+
+#### Free Space Navigation (`FreeSpaceModule.cpp`)
+*   **Goal**: Find safe directions to walk.
+*   **Logic**: Splits the depth map into vertical sectors (Left, Center, Right).
+    *   Calculates average depth in each sector.
+    *   If depth < `minClearance`, marks sector as BLOCKED.
+    *   Suggests "TURN" if the center path is blocked.
+
+#### Edge/Drop-Off Detection (`EdgeSafetyModule.cpp`)
+*   **Goal**: Detect stairs, curbs, and holes.
+*   **Logic**: Analysis of depth gradients.
+    *   Computes vertical gradient (dy) of the depth map's ground region (bottom 40%).
+    *   High gradient > `threshold` indicates a sharp change in elevation (steps/drop-offs).
 
 ---
 

@@ -4,16 +4,18 @@
 #include <vector>
 #include <string>
 
-struct DetectedObject {
-    std::string label;
-    float confidence;
-    cv::Rect boundingBox;
-    int classID;
-};
+// DetectedObject is now in Context.h
 
-class ObjectEngine {
+#include "../kernel/IModule.h"
+
+class ObjectEngine : public IModule {
 public:
     ObjectEngine();
+
+    // IModule Implementation
+    bool init(const std::map<std::string, std::string>& params) override; 
+    void process(Context& ctx) override;
+    std::string getName() const override { return "ObjectModule"; }
     
     enum class ModelType {
         SSD_MOBILENET,  // Caffe Style [1, 1, N, 7]
@@ -56,4 +58,9 @@ private:
     std::vector<std::string> classNames;
     bool isInitialized;
     ModelConfig currentConfig;
+    
+    // Throttling
+    bool processEveryFrame = true;
+    int skipInterval = 5;
+    int internalFrameCount = 0;
 };

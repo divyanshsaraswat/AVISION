@@ -18,7 +18,11 @@ set(CORE_SOURCES
     src/core/geometry/GeometryEngine.cpp
     src/core/distance/DistanceEngine.cpp
     src/core/semantics/ObjectEngine.cpp
+    src/core/semantics/TemporalModule.cpp
     src/core/depth/DepthEngine.cpp
+    src/core/geometry/FreeSpaceModule.cpp
+    src/core/geometry/EdgeSafetyModule.cpp
+    src/core/utils/ConfigLoader.cpp
 )
 
 set(PLATFORM_SOURCES
@@ -53,10 +57,16 @@ add_custom_command(TARGET AVision POST_BUILD
 
 add_executable(AVisionCLI
     src/video_cli.cpp
+    src/core/Engine.cpp
     src/core/semantics/ObjectEngine.cpp
+    src/core/semantics/TemporalModule.cpp
     src/core/geometry/GeometryEngine.cpp
+    src/core/geometry/FreeSpaceModule.cpp
+    src/core/geometry/EdgeSafetyModule.cpp
     src/core/distance/DistanceEngine.cpp
     src/core/depth/DepthEngine.cpp
+    src/platform/desktop/DesktopAudio.cpp
+    src/core/utils/ConfigLoader.cpp
 )
 target_link_libraries(AVisionCLI ${OpenCV_LIBS})
 

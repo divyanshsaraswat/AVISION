@@ -24,6 +24,9 @@ This project follows a strict **Systems Engineering** approach to ensure safety 
     *   **Geometry Engine**: Analyses the frame to find walkable ground and obstacles.
     *   **Distance Engine**: Estimates "Time-to-Collision" using monocular cues.
     *   **Risk Engine**: Decides *if* and *when* to alert the user (Safety Logic).
+    *   **Temporal Module**: Stabilizes detections over time to reduce jitter.
+    *   **Free Space Module**: Analyzes depth maps to identify safe navigation sectors.
+    *   **Edge Safety Module**: Detects drop-offs and curbs using depth gradients.
 *   **Portability**: Compiles unchanged on Windows, Linux, Android (NDK), iOS, and Raspberry Pi.
 
 ### 2. The Platform ("The Body")
@@ -137,6 +140,7 @@ make
 *   **Phase 3 (Done)**: Platform Portability (Android JNI Bridge & Passive Core Refactor).
 *   **Phase 4 (Done)**: Video Analysis CLI & Optimization.
 *   **Phase 5 (Done)**: Depth Estimation Integration (MiDaS) & Safety Fusion.
+*   **Phase 6 (Done)**: Advanced Safety Modules (Temporal Stabilization, Free Space Navigation, Drop-off Detection).
 
 ---
 

@@ -4,6 +4,9 @@
 #include "core/Engine.h"
 #include "platform/desktop/DesktopCamera.h"
 #include "platform/desktop/DesktopAudio.h"
+#include "core/geometry/GeometryEngine.h"
+#include "core/semantics/ObjectEngine.h"
+#include "core/depth/DepthEngine.h"
 
 int main() {
     try {
@@ -26,6 +29,16 @@ int main() {
 
         // 2. Init Core Layer (The "Brain")
         Engine engine(camera, audio);
+        
+        // 2b. Assemble Pipeline (Modular Composition)
+        // Order matters! 
+        // 1. Geometry (analyzes safe zones)
+        // 2. Object (detects classes)
+        // 3. Depth (refines distance)
+        
+        engine.addModule(std::make_unique<GeometryEngine>());
+        engine.addModule(std::make_unique<ObjectEngine>());
+        engine.addModule(std::make_unique<DepthEngine>());
 
         // 3. Init Engine
         if (!engine.init()) {

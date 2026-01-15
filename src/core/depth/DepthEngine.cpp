@@ -31,6 +31,85 @@ bool DepthEngine::init(const std::string& modelPath) {
     }
 }
 
+bool DepthEngine::init(const std::map<std::string, std::string>& params) {
+    std::string modelPath = "models/midas-v2_1-small-192x256.onnx";
+    
+    // Check if path is provided in config
+    auto it = params.find("modelPath");
+    if (it != params.end()) {
+        modelPath = it->second;
+    }
+    
+    // Throttling
+    if (params.count("eachFrame")) {
+        std::string val = params.at("eachFrame");
+        processEveryFrame = (val == "true" || val == "1");
+    }
+    if (params.count("interval")) {
+        skipInterval = std::stoi(params.at("interval"));
+    }
+    
+    return init(modelPath);
+}
+
+void DepthEngine::process(Context& ctx) {
+    if (!isInitialized || ctx.rawFrame.empty()) return;
+    
+    internalFrameCount++;
+    bool shouldRun = processEveryFrame || (internalFrameCount % skipInterval == 0);
+
+    if (!shouldRun) {
+        // Throttled: Use Cache
+        if (!cachedDepthMap.empty()) {
+            ctx.depthMap = cachedDepthMap.clone();
+            if (!cachedAlert.empty()) ctx.activeAlert = cachedAlert;
+        }
+        return;
+    }
+
+    double t_start = (double)cv::getTickCount();
+    
+    // Run estimation
+    cv::Mat result = estimateDepth(ctx.rawFrame);
+    
+    // Update Cache
+    if (!result.empty()) {
+        cachedDepthMap = result.clone();
+        ctx.depthMap = result;
+    }
+    
+    // Reset alert for this new frame analysis
+    cachedAlert = ""; 
+
+    // Check for "Close Object" (High Average Depth)
+    if (!ctx.depthMap.empty()) {
+        // MiDaS: High value = Close
+        cv::Scalar meanDepth = cv::mean(ctx.depthMap);
+        float avgDepth = (float)meanDepth[0];
+        
+        int cx = ctx.depthMap.cols / 4;
+        int cy = ctx.depthMap.rows / 4;
+        int cw = ctx.depthMap.cols / 2;
+        int ch = ctx.depthMap.rows / 2;
+        
+        cv::Mat centerRegion = ctx.depthMap(cv::Rect(cx, cy, cw, ch));
+        cv::Scalar centerMean = cv::mean(centerRegion);
+        float centerAvg = (float)centerMean[0]; 
+        
+        if (centerAvg > 500.0f) { 
+             cachedAlert = "Warning: Object Close!";
+             ctx.activeAlert = cachedAlert;
+        }
+    }
+    
+    double t_end = (double)cv::getTickCount();
+    double time_ms = ((t_end - t_start) / cv::getTickFrequency()) * 1000.0;
+    
+    if (!processEveryFrame) {
+         std::cout << "[DepthModule] Inference Time: " << time_ms << " ms" << std::endl;
+    }
+}
+
 cv::Mat DepthEngine::estimateDepth(const cv::Mat& inputFrame) {
     if (!isInitialized || inputFrame.empty()) return cv::Mat();
 
@@ -49,9 +128,6 @@ cv::Mat DepthEngine::estimateDepth(const cv::Mat& inputFrame) {
     cv::subtract(resized, mean, resized);
     
     // Divide by Std (Multiply by 1/Std)
-    // Note: cv::divide with scalar handles per-channel if we pass scalar correctly
-    // or we multiply. 
-    // CV_32FC3 element-wise multiplication
     std::vector<cv::Mat> channels(3);
     cv::split(resized, channels);
     
@@ -62,29 +138,19 @@ cv::Mat DepthEngine::estimateDepth(const cv::Mat& inputFrame) {
     cv::merge(channels, resized);
 
     // 2. Create Blob (No further mean/scale needed, swapRB already done via cvtColor)
-    // size=192x256
     cv::Mat blob = cv::dnn::blobFromImage(resized, 1.0, cv::Size(), cv::Scalar(), false, false);
 
     // 3. Inference
     net.setInput(blob);
-    cv::Mat outputBlob = net.forward(); // shape: [1, h, w] or [1, 1, h, w]?
+    cv::Mat outputBlob = net.forward(); 
 
     // 4. Extract Output
-    // Output shape typically [1, 192, 256] or similar
-    // We want to return a CV_32F matrix image
-    
-    // Handle dimensions
-    // 2D output?
     if (outputBlob.dims > 2) {
-        // Assume [1, H, W] or [1, 1, H, W]
-        // Get pointer to data
-        // We can reshape to 2D
-        // Size[2] and Size[3] usually H, W
         int h_out = outputBlob.size[outputBlob.dims - 2];
         int w_out = outputBlob.size[outputBlob.dims - 1];
         
         cv::Mat depthMap(h_out, w_out, CV_32F, outputBlob.ptr<float>());
-        return depthMap.clone(); // Clone to own data
+        return depthMap.clone(); 
     }
 
     return outputBlob;
