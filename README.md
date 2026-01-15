@@ -13,7 +13,18 @@
 
 ---
 
-## 🚀 Getting Started
+## � Table of Contents
+- [🚀 Getting Started](#-getting-started)
+- [🧠 System Architecture: "Portable Core"](#-system-architecture-portable-core)
+- [🔬 Deep Dive: Algorithms & Logic](#-deep-dive-algorithms--logic)
+- [🛠️ Build & Dependency System](#%EF%B8%8F-build--dependency-system)
+- [📂 Project Structure](#-project-structure)
+- [🌍 Platform Support Status](#-platform-support-status)
+- [🔮 Roadmap](#-roadmap)
+
+---
+
+## �🚀 Getting Started
 
 ### Prerequisites
 *   **Git**: Version control.
