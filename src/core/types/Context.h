@@ -38,4 +38,9 @@ struct Context {
     // 4. Flags / Signals
     bool isPathSafe = true;
     std::string activeAlert; // e.g. "STOP", "CHAIR AHEAD"
+
+    // UI/Status Messages (for centralized rendering)
+    std::string sceneLabel;       // e.g. "Scene: Park"
+    std::string guidanceCommand;  // e.g. "Veer Left"
+    std::string edgeSafetyAlert;  // e.g. "CAUTION: STEPS"
 };

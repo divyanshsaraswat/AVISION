@@ -34,8 +34,9 @@ void FreeSpaceModule::process(Context& ctx) {
 
     // Visualization: Draw simple lines for sectors
     if (!ctx.debugOverlay.empty()) {
+        // Subtle lines
         for (int i = 1; i < sectors; ++i) {
-            cv::line(ctx.debugOverlay, cv::Point(i * sectorWidth, 0), cv::Point(i * sectorWidth, h), cv::Scalar(0, 255, 255), 1);
+            cv::line(ctx.debugOverlay, cv::Point(i * sectorWidth, 0), cv::Point(i * sectorWidth, h - 15), cv::Scalar(100, 100, 100), 1);
         }
     }
 
@@ -89,9 +90,12 @@ void FreeSpaceModule::process(Context& ctx) {
             }
         }
 
-        // Draw status on overlay
+        // Draw status on overlay (Refactored: Color Bar at bottom)
         if (!ctx.debugOverlay.empty()) {
-            cv::putText(ctx.debugOverlay, status, cv::Point(i * sectorWidth + 10, h - 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
+            // Draw a thin bar at the bottom representing this sector's safety
+            cv::Rect barRect(i * sectorWidth, h - 10, sectorWidth, 10);
+            cv::rectangle(ctx.debugOverlay, barRect, color, -1);
+            cv::rectangle(ctx.debugOverlay, barRect, cv::Scalar(50,50,50), 1); // Border
         }
     }
     

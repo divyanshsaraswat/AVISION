@@ -4,24 +4,26 @@
             "name": "GeometryModule",
             "enabled": true,
             "params": {
-                "safeZoneThreshold": "0.7"
+                "safeZoneThreshold": "0.7",
+                "interval": "30"
             }
         },
         {
             "name": "ObjectModule",
             "enabled": true,
             "params": {
-                "modelPath": "models/MobileNetSSD_deploy.caffemodel",
-                "configPath": "models/MobileNetSSD_deploy.prototxt",
+                "modelPath": "build/Release/models/MobileNetSSD_deploy.caffemodel",
+                "configPath": "build/Release/models/MobileNetSSD_deploy.prototxt",
                 "threshold": "0.1",
-                "eachFrame": "true"
+                "eachFrame": "false",
+                "interval": "5"
             }
         },
         {
             "name": "DepthModule",
             "enabled": true,
             "params": {
-                "modelPath": "models/midas-v2_1-small-192x256.onnx",
+                "modelPath": "build/Release/models/midas-v2_1-small-192x256.onnx",
                 "eachFrame": "false",
                 "interval": "30"
             }
@@ -36,7 +38,7 @@
         },
         {
             "name": "FreeSpaceModule",
-            "enabled": true,
+            "enabled": false,
             "params": {
                 "sectors": "3",
                 "minClearance": "1.0"
@@ -47,6 +49,31 @@
             "enabled": true,
             "params": {
                 "gradientThreshold": "0.25"
+            }
+        },
+        {
+            "name": "OCRModule",
+            "enabled": true,
+            "params": {
+                "detectModel": "build/Release/models/text_detection_db.onnx",
+                "recogModel": "build/Release/models/text_recognition_crnn.onnx",
+                "interval": "35"
+            }
+        },
+        {
+            "name": "PathGuidanceModule",
+            "enabled": true,
+            "params": {
+                "turnThreshold": "0.5"
+            }
+        },
+        {
+            "name": "SceneUnderstandingModule",
+            "enabled": true,
+            "params": {
+                "modelPath": "build/Release/models/resnet18_places365.onnx",
+                "classesPath": "build/Release/models/scene_classes.txt",
+                "interval": "40"
             }
         }
     ]

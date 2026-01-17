@@ -14,6 +14,9 @@
 #include "core/semantics/TemporalModule.h"
 #include "core/geometry/FreeSpaceModule.h"
 #include "core/geometry/EdgeSafetyModule.h"
+#include "core/semantics/OCRModule.h"
+#include "core/geometry/PathGuidanceModule.h"
+#include "core/semantics/SceneUnderstandingModule.h"
 
 // Note: Config loading should ideally be centralized.
 // For now, we assume modules load their own defaults or logic in init()
@@ -79,6 +82,9 @@ int main(int argc, char** argv) {
         else if (modCfg.name == "TemporalModule") module = std::make_unique<TemporalModule>();
         else if (modCfg.name == "FreeSpaceModule") module = std::make_unique<FreeSpaceModule>();
         else if (modCfg.name == "EdgeSafetyModule") module = std::make_unique<EdgeSafetyModule>();
+        else if (modCfg.name == "OCRModule") module = std::make_unique<OCRModule>();
+        else if (modCfg.name == "PathGuidanceModule") module = std::make_unique<PathGuidanceModule>();
+        else if (modCfg.name == "SceneUnderstandingModule") module = std::make_unique<SceneUnderstandingModule>();
         
         if (module) {
             engine.configureModule(modCfg.name, modCfg.params);

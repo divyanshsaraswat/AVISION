@@ -87,10 +87,10 @@ bool Engine::processFrame(cv::Mat& frame, cv::Mat& debugOut, std::vector<Detecte
         // Simple Thresholds (DistanceEngine logic duplicated here for now)
         if (maxDist > 0.85f) { // IMMEDIATE
              audio->playTone(AudioUrgency::CRITICAL);
-             cv::putText(ctx.debugOverlay, "CRITICAL STOP!", cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 3);
+             ctx.activeAlert = "CRITICAL STOP!";
         } else if (maxDist > 0.6f) { // NEAR
              audio->playTone(AudioUrgency::WARNING);
-             cv::putText(ctx.debugOverlay, "WARNING: OBSTACLE", cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 255), 2);
+             ctx.activeAlert = "WARNING: OBSTACLE";
         } else {
              audio->playTone(AudioUrgency::WARNING);
         }
@@ -106,9 +106,6 @@ bool Engine::processFrame(cv::Mat& frame, cv::Mat& debugOut, std::vector<Detecte
         
         // Blend: 0.7 Original + 0.3 Depth
         cv::addWeighted(ctx.debugOverlay, 0.7, depthVis, 0.3, 0, ctx.debugOverlay);
-        
-        // Also show small inset for clarity? 
-        // For now, blending is good for context.
     }
 
     // Draw Detections
@@ -118,9 +115,57 @@ bool Engine::processFrame(cv::Mat& frame, cv::Mat& debugOut, std::vector<Detecte
         cv::putText(ctx.debugOverlay, label, cv::Point(obj.boundingBox.x, obj.boundingBox.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
     }
     
-    // Draw Active Alert
+    // --- Centralized UI Rendering ---
+    // Stack messages effectively at the bottom
+    int h = ctx.debugOverlay.rows;
+    int w = ctx.debugOverlay.cols;
+    int bottomY = h - 40; // Start from bottom up (leaving space for status bars)
+    
+    auto drawMessage = [&](const std::string& msg, cv::Scalar color, float scale = 0.7) {
+        if (msg.empty()) return;
+        
+        int thickness = 2;
+        int baseline = 0;
+        cv::Size textSize = cv::getTextSize(msg, cv::FONT_HERSHEY_SIMPLEX, scale, thickness, &baseline);
+        
+        // Draw Background
+        cv::Point textOrg(20, bottomY); // Left Aligned padding 20
+        cv::rectangle(ctx.debugOverlay, textOrg + cv::Point(-5, baseline + 5), textOrg + cv::Point(textSize.width + 5, -textSize.height - 5), cv::Scalar(0,0,0), -1);
+        
+        // Draw Text
+        cv::putText(ctx.debugOverlay, msg, textOrg, cv::FONT_HERSHEY_SIMPLEX, scale, color, thickness);
+        
+        // Move up
+        bottomY -= (textSize.height + 15);
+    };
+
+    // 1. Navigation Command (Green) - Bottom most text
+    drawMessage(ctx.guidanceCommand, cv::Scalar(0, 255, 0), 0.8);
+
+    // 2. Scene Info (Yellow) - Above Nav
+    drawMessage(ctx.sceneLabel, cv::Scalar(0, 255, 255), 0.7);
+
+    // 3. Edge Safety Alert (Red Bar)
+    if (!ctx.edgeSafetyAlert.empty()) {
+        drawMessage(ctx.edgeSafetyAlert, cv::Scalar(0, 0, 255), 0.8);
+    }
+
+    // 4. Critical Alert (Red) - User requested: Small font, Bottom Right
     if (!ctx.activeAlert.empty()) {
-        cv::putText(ctx.debugOverlay, ctx.activeAlert, cv::Point(50, 400), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(0, 0, 255), 3);
+         std::string msg = ctx.activeAlert;
+         float scale = 0.6; // Small font
+         int thickness = 2;
+         int baseline = 0;
+         cv::Size textSize = cv::getTextSize(msg, cv::FONT_HERSHEY_SIMPLEX, scale, thickness, &baseline);
+         
+         // Position: Bottom Right (padding 20 from right, 40 from bottom)
+         cv::Point textOrg(w - textSize.width - 20, h - 40);
+         
+         // Background
+         cv::rectangle(ctx.debugOverlay, textOrg + cv::Point(-5, baseline + 5), textOrg + cv::Point(textSize.width + 5, -textSize.height - 5), cv::Scalar(0,0,0), -1);
+         
+         // Text (Red)
+         cv::putText(ctx.debugOverlay, msg, textOrg, cv::FONT_HERSHEY_SIMPLEX, scale, cv::Scalar(0, 0, 255), thickness);
     }
     
     debugOut = ctx.debugOverlay;

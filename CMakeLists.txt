@@ -22,6 +22,9 @@ set(CORE_SOURCES
     src/core/depth/DepthEngine.cpp
     src/core/geometry/FreeSpaceModule.cpp
     src/core/geometry/EdgeSafetyModule.cpp
+    src/core/semantics/OCRModule.cpp
+    src/core/geometry/PathGuidanceModule.cpp
+    src/core/semantics/SceneUnderstandingModule.cpp
     src/core/utils/ConfigLoader.cpp
 )
 
@@ -63,6 +66,9 @@ add_executable(AVisionCLI
     src/core/geometry/GeometryEngine.cpp
     src/core/geometry/FreeSpaceModule.cpp
     src/core/geometry/EdgeSafetyModule.cpp
+    src/core/semantics/OCRModule.cpp
+    src/core/geometry/PathGuidanceModule.cpp
+    src/core/semantics/SceneUnderstandingModule.cpp
     src/core/distance/DistanceEngine.cpp
     src/core/depth/DepthEngine.cpp
     src/platform/desktop/DesktopAudio.cpp

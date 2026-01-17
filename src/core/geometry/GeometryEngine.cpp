@@ -1,9 +1,19 @@
 #include "GeometryEngine.h"
 #include <opencv2/imgproc.hpp>
 
-GeometryEngine::GeometryEngine() : pathSafe(true) {}
+GeometryEngine::GeometryEngine() : pathSafe(true), frameCount(0), processInterval(5) {}
+
+bool GeometryEngine::init(const std::map<std::string, std::string>& params) {
+    if (params.find("interval") != params.end()) {
+        processInterval = std::stoi(params.at("interval"));
+    }
+    return true;
+}
 
 void GeometryEngine::process(Context& ctx) {
+    frameCount++;
+    if (frameCount % processInterval != 0) return;
+
     if (ctx.rawFrame.empty()) return;
     
     // Use the overlay from context

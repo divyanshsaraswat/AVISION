@@ -12,4 +12,6 @@ public:
 
 private:
     float gradientThreshold = 0.25f;
+    int frameCount = 0;
+    int processInterval = 1;
 };

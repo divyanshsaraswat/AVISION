@@ -11,7 +11,7 @@ public:
     GeometryEngine();
 
     // IModule Implementation
-    bool init(const std::map<std::string, std::string>& params) override { return true; } // Params unused for now
+    bool init(const std::map<std::string, std::string>& params) override;
     void process(Context& ctx) override;
     std::string getName() const override { return "GeometryModule"; }
     
@@ -28,4 +28,7 @@ private:
 
     std::vector<Obstacle> currentObstacles;
     bool pathSafe;
+    
+    int frameCount = 0;
+    int processInterval = 5; // Default check every 5 frames
 };

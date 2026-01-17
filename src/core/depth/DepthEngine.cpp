@@ -49,6 +49,9 @@ bool DepthEngine::init(const std::map<std::string, std::string>& params) {
         skipInterval = std::stoi(params.at("interval"));
     }
     
+    std::cout << "[DepthEngine] Init: " << modelPath 
+              << ", Interval: " << skipInterval 
+              << ", Continuous: " << (processEveryFrame ? "YES" : "NO") << std::endl;
     return init(modelPath);
 }
 

@@ -8,12 +8,18 @@ bool EdgeSafetyModule::init(const std::map<std::string, std::string>& params) {
     if (params.find("gradientThreshold") != params.end()) {
         gradientThreshold = std::stof(params.at("gradientThreshold"));
     }
-    std::cout << "[EdgeSafetyModule] Init: gradientThreshold=" << gradientThreshold << std::endl;
+    if (params.find("interval") != params.end()) {
+        processInterval = std::stoi(params.at("interval"));
+    }
+    std::cout << "[EdgeSafetyModule] Init: gradientThreshold=" << gradientThreshold << ", Interval=" << processInterval << std::endl;
     return true;
 }
 
 void EdgeSafetyModule::process(Context& ctx) {
     if (ctx.depthMap.empty()) return;
+
+    frameCount++;
+    if (frameCount % processInterval != 0) return;
 
     // Gradient Analysis for drop-off detection
     // We compute the gradient in the Y direction (vertical changes).
@@ -98,9 +104,8 @@ void EdgeSafetyModule::process(Context& ctx) {
         }
         
         if (danger) {
-            ctx.activeAlert = "DROP-OFF DETECTED";
-             cv::putText(ctx.debugOverlay, "CAUTION: STEPS/CURB", cv::Point(50, h - 100), 
-                        cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 255), 3);
+             ctx.edgeSafetyAlert = "CAUTION: STEPS / DROP-OFF";
+             // ctx.activeAlert = "DROP-OFF DETECTED"; // Optional: keep system alert if needed for Audio, but UI is now separate
         }
     }
 }
