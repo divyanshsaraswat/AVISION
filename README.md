@@ -46,7 +46,7 @@
     ```cmd
     .\download_models.bat
     ```
-    *Note: This is now an interactive wizard! Follow the prompts to select your preferred model (YOLOv8, MobileNet, etc).*
+    *Note: Models are also automatically checked and downloaded during the build process.*
 
 3.  **Build the System**:
     This script configures CMake, downloads OpenCV (if needed), and compiles the Release build.
@@ -114,7 +114,7 @@ This project follows a strict **Systems Engineering** approach to ensure safety 
 The "Semantic Eye" of the system. It wraps OpenCV DNN to provide generic object detection.
 
 *   **Model Support**: Factory Pattern based on `ModelType` enum (`SSD_MOBILENET`, `YOLO_V8`).
-*   **Configuration**: Runtime configurable via `selected_model.json`.
+*   **Configuration**: Runtime configurable via `modules.json`.
     *   **Input Resolution**: SSD (300x300), YOLO (640x640).
     *   **Normalization**: Auto-configured based on model type.
 *   **Post-Processing**:
@@ -154,7 +154,20 @@ Calculates "Time-to-Collision" based on 2D position (Monocular Depth).
     *   **Goal**: Detect stairs, curbs, and holes.
     *   **Logic**: Computes Y-axis gradient of depth map (sobels). High gradient > `0.25` indicates sharp elevation change.
 
-### 5. Audio Feedback Loop
+### 6. Semantic & Guidance Modules (New in Phase 6b)
+*   **Scene Understanding (`SceneUnderstandingModule.cpp`)**:
+    *   **Goal**: Provide context about the environment (e.g., "Bedroom", "Crosswalk", "Train Station").
+    *   **Algorithm**: ResNet18 trained on Places365 dataset.
+    *   **Logic**: Classifies the entire frame into one of 365 scene categories. Helps the user understand *where* they are.
+*   **OCR / Text Recognition (`OCRModule.cpp`)**:
+    *   **Goal**: Read signage and labels.
+    *   **Algorithm**: DBNet (Detection) + CRNN (Recognition).
+    *   **Logic**: Detects text regions and converts them to speech. Useful for reading room numbers, street signs, or product labels.
+*   **Path Guidance (`PathGuidanceModule.cpp`)**:
+    *   **Goal**: Keep the user centered on the path.
+    *   **Logic**: analyzes free space distribution. If the majority of free space is to the left, it suggests "Turn Left".
+
+### 7. Audio Feedback Loop
 The system uses a "Silence by Default" philosophy, alerting only on positive detection.
 *   **CRITICAL**: High-pitch beep (2000Hz).
 *   **WARNING**: Mid-pitch beep (1000Hz).
@@ -223,6 +236,7 @@ make
 *   **Phase 4 (Done)**: Video Analysis CLI & Optimization.
 *   **Phase 5 (Done)**: Depth Estimation Integration (MiDaS) & Safety Fusion.
 *   **Phase 6 (Done)**: Advanced Safety Modules (Temporal Stabilization, Free Space Navigation, Drop-off Detection).
+*   **Phase 7 (Done)**: Semantic Intelligence (Scene Understanding, OCR, Path Guidance).
 
 ---
 
