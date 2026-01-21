@@ -16,12 +16,23 @@ void GeometryEngine::process(Context& ctx) {
 
     if (ctx.rawFrame.empty()) return;
     
+    double t_start = (double)cv::getTickCount();
+    
     // Use the overlay from context
     process(ctx.rawFrame, ctx.debugOverlay);
     
     // Copy results to Context
     ctx.isPathSafe = isPathSafe();
     ctx.obstacles = getObstacles();
+    
+    double t_end = (double)cv::getTickCount();
+    double time_ms = ((t_end - t_start) / cv::getTickFrequency()) * 1000.0;
+    
+    // Log
+    std::string safeStr = ctx.isPathSafe ? "Safe" : "UNSAFE";
+    std::string obsStr = std::to_string(ctx.obstacles.size()) + " obs";
+    // [Geometry] 12.5 ms, Path: Safe, 5 obs
+    ctx.moduleLogs.push_back("[Geometry] " + std::to_string(time_ms).substr(0,4) + " ms, Path: " + safeStr + ", " + obsStr);
 }
 
 void GeometryEngine::process(const cv::Mat& inputFrame, cv::Mat& debugFrame) {

@@ -52,17 +52,19 @@ void SceneUnderstandingModule::process(Context& ctx) {
     frameCount++;
     if (!modelLoaded || classes.empty() || frameCount % processInterval != 0 || ctx.rawFrame.empty()) return;
 
-    // Inference
-    // Torchvision models expect (pixel - mean) / std
-    // Mean ~ [123, 116, 103], Std ~ [58, 57, 57]
-    // Scale factor should be 1.0 / 58.0 ~= 0.017
-    cv::Mat blob = cv::dnn::blobFromImage(ctx.rawFrame, 0.017, cv::Size(224, 224), cv::Scalar(123.68, 116.78, 103.94), true, false);
+    double t_start = (double)cv::getTickCount();
+
+    // 1. Preprocess
+    cv::Mat inputBlob = cv::dnn::blobFromImage(ctx.rawFrame, 1.0, cv::Size(224, 224), cv::Scalar(123.68, 116.78, 103.94), true, false);
     
-    // Inference
-    net.setInput(blob);
+    // 2. Inference
+    net.setInput(inputBlob);
     cv::Mat prob = net.forward();
     
-    // Find best class
+    double t_end = (double)cv::getTickCount();
+    double time_ms = ((t_end - t_start) / cv::getTickFrequency()) * 1000.0;
+
+    // 3. Post-process (Softmax & Label)
     double conf;
     cv::Point classIdPoint;
     cv::minMaxLoc(prob, 0, &conf, 0, &classIdPoint);
@@ -71,7 +73,9 @@ void SceneUnderstandingModule::process(Context& ctx) {
     if (classId >= 0 && classId < classes.size()) {
         std::string scene = classes[classId];
         ctx.sceneLabel = "Scene: " + scene;
-        // Optional: Keep simple log or remove entirely for production
-        // std::cout << "[Scene] " << scene << " (" << conf << ")" << std::endl;
+        
+        // Log
+        std::string log = "[Scene] " + std::to_string(time_ms).substr(0,4) + " ms, " + scene + " (" + std::to_string(conf).substr(0,4) + ")";
+        ctx.moduleLogs.push_back(log);
     }
 }

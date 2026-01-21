@@ -93,8 +93,9 @@ void ObjectEngine::process(Context& ctx) {
     double time_ms = ((t_end - t_start) / cv::getTickFrequency()) * 1000.0;
     
     if (!processEveryFrame) {
-         // Only log if we are in "profiling/throttled" mode to avoid spamming 30fps
-         std::cout << "[ObjectModule] Inference Time: " << time_ms << " ms. Detections: " << ctx.detections.size() << std::endl;
+         // Verbose logging disabled to prevent console I/O blocking
+         // std::string log = "[ObjectModule] " + std::to_string(time_ms).substr(0,4) + " ms, " + std::to_string(ctx.detections.size()) + " objs";
+         // ctx.moduleLogs.push_back(log);
     }
 }
 

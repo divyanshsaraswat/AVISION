@@ -14,20 +14,27 @@ bool DepthEngine::init(const std::string& modelPath) {
         net.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
         net.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
         */
-        // Build for CPU Edge usually
+        // Try OpenCL for speed boost on Intel integrated graphics
         net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-        net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+        net.setPreferableTarget(cv::dnn::DNN_TARGET_OPENCL); 
         
         isInitialized = !net.empty();
         if (isInitialized) {
-             std::cout << "[DepthEngine] Model loaded successfully." << std::endl;
+             std::cout << "[DepthEngine] Model loaded successfully. Using OpenCL if available." << std::endl;
         } else {
              std::cerr << "[DepthEngine] Error: Net is empty." << std::endl;
         }
         return isInitialized;
     } catch (const cv::Exception& e) {
         std::cerr << "[DepthEngine] Exception loading model: " << e.what() << std::endl;
-        return false;
+        // Fallback to CPU
+        try {
+            net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+            net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+            isInitialized = !net.empty();
+            std::cout << "[DepthEngine] Fallback to CPU." << std::endl;
+            return isInitialized;
+        } catch(...) { return false; }
     }
 }
 
@@ -55,61 +62,71 @@ bool DepthEngine::init(const std::map<std::string, std::string>& params) {
     return init(modelPath);
 }
 
+
 void DepthEngine::process(Context& ctx) {
     if (!isInitialized || ctx.rawFrame.empty()) return;
     
     internalFrameCount++;
-    bool shouldRun = processEveryFrame || (internalFrameCount % skipInterval == 0);
+    
+    // 1. Check if previous async task is done
+    if (isProcessing) {
+        if (pendingFuture.valid() && pendingFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+            // Task completed!
+            try {
+                cv::Mat result = pendingFuture.get();
+                if (!result.empty()) {
+                    cachedDepthMap = result.clone();
+                    // Log the time (we can't easily measure inside async without struct, 
+                    // simplifying to just 'Async Update' or storing start time in member)
+                    // For now, let's just mark it updated.
+                    ctx.moduleLogs.push_back("[DepthModule] Updated (Async)");
+                }
+            } catch(...) {
+                std::cerr << "[DepthModule] Async Error" << std::endl;
+            }
+            isProcessing = false;
+        }
+    }
+    
+    // 2. Launch new task if idle and interval met
+    if (!isProcessing) {
+        bool timeToRun = processEveryFrame || (internalFrameCount % skipInterval == 0);
+        if (timeToRun) {
+            isProcessing = true;
+            
+            // Clone frame for thread safety
+            cv::Mat frameForThread = ctx.rawFrame.clone();
+            
+            // Launch Async
+            pendingFuture = std::async(std::launch::async, [this, frameForThread]() {
+                // Measure time inside thread if we want, but logging back is tricky.
+                return estimateDepth(frameForThread);
+            });
+        }
+    }
 
-    if (!shouldRun) {
-        // Throttled: Use Cache
+    // 3. Always Provide Cached Result (Non-blocking)
+    if (!cachedDepthMap.empty()) {
+        ctx.depthMap = cachedDepthMap.clone();
+        
+        // Re-run alert logic on the CACHED map every frame (cheap)
+        // or just cache the alert too? Let's re-run alert on cache to make it responsive to UI
         if (!cachedDepthMap.empty()) {
-            ctx.depthMap = cachedDepthMap.clone();
-            if (!cachedAlert.empty()) ctx.activeAlert = cachedAlert;
+            cv::Scalar meanDepth = cv::mean(cachedDepthMap);
+            // ... (rest of alert logic can stay or be simplified) ...
+             int cx = cachedDepthMap.cols / 4;
+             int cy = cachedDepthMap.rows / 4;
+             int cw = cachedDepthMap.cols / 2;
+             int ch = cachedDepthMap.rows / 2;
+             
+             cv::Mat centerRegion = cachedDepthMap(cv::Rect(cx, cy, cw, ch));
+             cv::Scalar centerMean = cv::mean(centerRegion);
+             float centerAvg = (float)centerMean[0]; 
+             
+             if (centerAvg > 500.0f) { 
+                  ctx.activeAlert = "Warning: Object Close!";
+             }
         }
-        return;
-    }
-
-    double t_start = (double)cv::getTickCount();
-    
-    // Run estimation
-    cv::Mat result = estimateDepth(ctx.rawFrame);
-    
-    // Update Cache
-    if (!result.empty()) {
-        cachedDepthMap = result.clone();
-        ctx.depthMap = result;
-    }
-    
-    // Reset alert for this new frame analysis
-    cachedAlert = ""; 
-
-    // Check for "Close Object" (High Average Depth)
-    if (!ctx.depthMap.empty()) {
-        // MiDaS: High value = Close
-        cv::Scalar meanDepth = cv::mean(ctx.depthMap);
-        float avgDepth = (float)meanDepth[0];
-        
-        int cx = ctx.depthMap.cols / 4;
-        int cy = ctx.depthMap.rows / 4;
-        int cw = ctx.depthMap.cols / 2;
-        int ch = ctx.depthMap.rows / 2;
-        
-        cv::Mat centerRegion = ctx.depthMap(cv::Rect(cx, cy, cw, ch));
-        cv::Scalar centerMean = cv::mean(centerRegion);
-        float centerAvg = (float)centerMean[0]; 
-        
-        if (centerAvg > 500.0f) { 
-             cachedAlert = "Warning: Object Close!";
-             ctx.activeAlert = cachedAlert;
-        }
-    }
-    
-    double t_end = (double)cv::getTickCount();
-    double time_ms = ((t_end - t_start) / cv::getTickFrequency()) * 1000.0;
-    
-    if (!processEveryFrame) {
-         std::cout << "[DepthModule] Inference Time: " << time_ms << " ms" << std::endl;
     }
 }
 
@@ -117,37 +134,20 @@ cv::Mat DepthEngine::estimateDepth(const cv::Mat& inputFrame) {
     if (!isInitialized || inputFrame.empty()) return cv::Mat();
 
     // 1. Resize/Pre-process
-    // "preprocessing": {"mean": [123.675, 116.28, 103.53], "scale": [58.395, 57.12, 57.375], "reverse_channels": true}
-    // "scale" in config usually is STD. So (Pixel - Mean) / Scale.
+    // We approximate the per-channel std [58.395, 57.12, 57.375] with average 57.63
+    // This allows using the fast caching blobFromImage function instead of manual split/merge
+    float scale = 1.0f / 57.63f;
+    cv::Scalar meanVal(123.675, 116.28, 103.53);
     
-    cv::Mat resized;
-    cv::resize(inputFrame, resized, cv::Size(inputWidth, inputHeight));
+    // SwapRB = true (BGR -> RGB)
+    // crop = false
+    cv::Mat blob = cv::dnn::blobFromImage(inputFrame, scale, cv::Size(inputWidth, inputHeight), meanVal, true, false);
 
-    // Convert BGR to RGB (reverse_channels: true)
-    cv::cvtColor(resized, resized, cv::COLOR_BGR2RGB);
-
-    // Manual normalization (since blobFromImage uses single scale)
-    resized.convertTo(resized, CV_32FC3);
-    cv::subtract(resized, mean, resized);
-    
-    // Divide by Std (Multiply by 1/Std)
-    std::vector<cv::Mat> channels(3);
-    cv::split(resized, channels);
-    
-    channels[0] = channels[0] / std[0];
-    channels[1] = channels[1] / std[1];
-    channels[2] = channels[2] / std[2];
-    
-    cv::merge(channels, resized);
-
-    // 2. Create Blob (No further mean/scale needed, swapRB already done via cvtColor)
-    cv::Mat blob = cv::dnn::blobFromImage(resized, 1.0, cv::Size(), cv::Scalar(), false, false);
-
-    // 3. Inference
+    // 2. Inference
     net.setInput(blob);
     cv::Mat outputBlob = net.forward(); 
 
-    // 4. Extract Output
+    // 3. Extract Output
     if (outputBlob.dims > 2) {
         int h_out = outputBlob.size[outputBlob.dims - 2];
         int w_out = outputBlob.size[outputBlob.dims - 1];
@@ -158,3 +158,4 @@ cv::Mat DepthEngine::estimateDepth(const cv::Mat& inputFrame) {
 
     return outputBlob;
 }
+

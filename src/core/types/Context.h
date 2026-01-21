@@ -43,4 +43,7 @@ struct Context {
     std::string sceneLabel;       // e.g. "Scene: Park"
     std::string guidanceCommand;  // e.g. "Veer Left"
     std::string edgeSafetyAlert;  // e.g. "CAUTION: STEPS"
+    
+    // 6. Logging Bus
+    std::vector<std::string> moduleLogs;
 };

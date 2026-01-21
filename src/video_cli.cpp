@@ -55,8 +55,14 @@ int main(int argc, char** argv) {
     Engine engine(nullptr, audio);
     
     // --- Dynamic Module Loading ---
+    // --- Dynamic Module Loading ---
     std::cout << "[AVisionCLI] Loading modules from models/modules.json..." << std::endl;
-    auto moduleConfigs = ConfigLoader::loadModules("models/modules.json");
+    // Load Full Config
+    AppConfig appConfig = ConfigLoader::loadAppConfig("models/modules.json");
+    auto moduleConfigs = appConfig.modules;
+    
+    // Set Pipeline Topology
+    engine.setPipeline(appConfig.pipeline);
     
     // Fallback if config failed/empty
     if (moduleConfigs.empty()) {
@@ -121,10 +127,11 @@ int main(int argc, char** argv) {
     }
 
     while (cap.read(frame)) {
-        std::vector<DetectedObject> detections;
+        // Run Pipeline with Context Access
+        Context ctx;
+        if (!engine.processFrame(frame, ctx)) break;
         
-        // Run Pipeline
-        engine.processFrame(frame, debugFrame, detections);
+        debugFrame = ctx.debugOverlay;
 
         // Resize debug frame if too large for screen (optional, but good for UX)
         // cv::resize(debugFrame, debugFrame, cv::Size(1280, 720)); // Example
@@ -135,15 +142,29 @@ int main(int argc, char** argv) {
              if (cv::waitKey(1) == 27) break; // ESC
         }
         
-        // Log to file
-        if (resFile.is_open() && !detections.empty()) {
+        // Log Unified Module Output
+        if (!ctx.moduleLogs.empty()) {
             double timestamp = cap.get(cv::CAP_PROP_POS_MSEC) / 1000.0;
-            resFile << "Time: " << timestamp << " sec | ";
-            for (const auto& obj : detections) {
-                resFile << obj.label << " (" << (int)(obj.confidence * 100) << "%), ";
+            std::stringstream tsStr;
+            tsStr << "[" << std::fixed << std::setprecision(2) << timestamp << "s] ";
+            
+            for (const auto& msg : ctx.moduleLogs) {
+                // Console
+                std::cout << tsStr.str() << msg << std::endl;
+                
+                // File
+                if (resFile.is_open()) {
+                    resFile << tsStr.str() << msg << "\n";
+                }
             }
-            resFile << "\n";
         }
+        
+        // Legacy redundant logging removed to avoid duplication
+        /*
+        if (resFile.is_open() && !detections.empty()) {
+            ...
+        }
+        */
         
         frameIdx++;
     }

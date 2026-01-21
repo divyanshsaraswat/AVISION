@@ -8,6 +8,9 @@ struct TrackedObject {
     int id;
     std::string label;
     std::deque<cv::Rect> history; // Store last N positions
+    cv::Rect2f smoothedBox;       // EMA Smoothed Box
+    cv::Point2f velocity;         // Velocity (dx, dy) per frame
+    bool hasSmoothed = false;
     int missingFrames = 0;
 };
 
@@ -24,6 +27,7 @@ private:
     // Parameters
     int windowSize = 5;
     float decay = 0.85f;
+    float alpha = 0.6f; // EMA factor (1.0 = no smoothing, 0.1 = heavy smoothing)
     
     // State
     std::vector<TrackedObject> tracks;

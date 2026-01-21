@@ -1,4 +1,35 @@
 {
+    "pipeline": {
+        "nodes": [
+            "GeometryModule",
+            "ObjectModule",
+            "DepthModule",
+            "TemporalModule",
+            "FreeSpaceModule",
+            "EdgeSafetyModule",
+            "OCRModule",
+            "PathGuidanceModule",
+            "SceneUnderstandingModule"
+        ],
+        "edges": [
+            [
+                "GeometryModule",
+                "ObjectModule"
+            ],
+            [
+                "GeometryModule",
+                "PathGuidanceModule"
+            ],
+            [
+                "GeometryModule",
+                "EdgeSafetyModule"
+            ],
+            [
+                "ObjectModule",
+                "TemporalModule"
+            ]
+        ]
+    },
     "modules": [
         {
             "name": "GeometryModule",
@@ -32,13 +63,13 @@
             "name": "TemporalModule",
             "enabled": true,
             "params": {
-                "windowSize": "5",
+                "windowSize": "2",
                 "decay": "0.85"
             }
         },
         {
             "name": "FreeSpaceModule",
-            "enabled": false,
+            "enabled": true,
             "params": {
                 "sectors": "3",
                 "minClearance": "1.0"

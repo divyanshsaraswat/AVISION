@@ -17,6 +17,83 @@ void Engine::configureModule(const std::string& moduleName, const std::map<std::
     moduleConfigs[moduleName] = params;
 }
 
+void Engine::setPipeline(const PipelineConfig& config) {
+    pipelineConfig = config;
+}
+
+void Engine::buildExecutionGraph() {
+    std::cout << "[Engine] Building Execution Graph..." << std::endl;
+    executionQueue.clear();
+    
+    // Map Name -> Module*
+    std::map<std::string, IModule*> nameToMod;
+    for (auto& m : modules) {
+        nameToMod[m->getName()] = m.get();
+    }
+    
+    // Build Adjacency List & In-Degree
+    std::map<std::string, std::vector<std::string>> adjList;
+    std::map<std::string, int> inDegree;
+    
+    // Init In-Degree for all known modules
+    for (auto& kv : nameToMod) {
+        inDegree[kv.first] = 0;
+    }
+    
+    // Parse Edges
+    for (const auto& edge : pipelineConfig.edges) {
+        std::string u = edge.first;
+        std::string v = edge.second;
+        
+        // Only if modules exist
+        if (nameToMod.count(u) && nameToMod.count(v)) {
+            adjList[u].push_back(v);
+            inDegree[v]++;
+        }
+    }
+    
+    // Kahn's Algorithm
+    std::vector<IModule*> queue; // Not std::queue for simplicity
+    
+    // Enqueue 0 in-degree
+    for (auto& kv : inDegree) {
+        if (kv.second == 0) {
+            queue.push_back(nameToMod[kv.first]);
+        }
+    }
+    
+    // Determine static order (so it's deterministic)
+    // Actually, queue order matters for graph levels. 
+    // We process the queue
+    
+    size_t head = 0;
+    while(head < queue.size()) {
+        IModule* u = queue[head++];
+        executionQueue.push_back(u);
+        
+        std::string uName = u->getName();
+        if (adjList.count(uName)) {
+            for (const std::string& vName : adjList[uName]) {
+                inDegree[vName]--;
+                if (inDegree[vName] == 0) {
+                    queue.push_back(nameToMod[vName]);
+                }
+            }
+        }
+    }
+    
+    // Check for cycles (if executionQueue.size < modules.size)
+    if (executionQueue.size() != modules.size()) {
+        std::cerr << "[Engine] Warning: Cycle detected or modules mismatch! Fallback to default order." << std::endl;
+        executionQueue.clear();
+        for(auto& m : modules) executionQueue.push_back(m.get());
+    } else {
+         std::cout << "[Engine] Execution Order: ";
+         for(auto* m : executionQueue) std::cout << m->getName() << " -> ";
+         std::cout << "END" << std::endl;
+    }
+}
+
 bool Engine::init() {
     std::cout << "[Engine] Starting Modular Pipeline..." << std::endl;
     audio->playTone(AudioUrgency::INFO); 
@@ -41,6 +118,9 @@ bool Engine::init() {
         }
     }
     
+    // Build Graph
+    buildExecutionGraph();
+    
     isRunning = true;
     frameCount = 0;
     return true;
@@ -52,32 +132,44 @@ void Engine::stop() {
     std::cout << "Stopping A-Vision Engine." << std::endl;
 }
 
+// ... processFrame methods ...
+
+// ... processFrame methods ...
+
 bool Engine::processFrame(cv::Mat& frame, cv::Mat& debugOut) {
     std::vector<DetectedObject> dummy;
     return processFrame(frame, debugOut, dummy);
 }
 
 bool Engine::processFrame(cv::Mat& frame, cv::Mat& debugOut, std::vector<DetectedObject>& outDetections) {
+    Context ctx;
+    bool res = processFrame(frame, ctx);
+    debugOut = ctx.debugOverlay;
+    outDetections = ctx.detections;
+    return res;
+}
+
+bool Engine::processFrame(cv::Mat& frame, Context& ctx) {
     if (!isRunning || frame.empty()) return false;
 
     // 1. Setup Context
-    Context ctx;
     ctx.rawFrame = frame;
     ctx.timestamp = frameCount * 0.033; // Approx
     ctx.debugOverlay = frame.clone(); // Base for drawing
     
-    // 2. Run Pipeline
-    for (auto& mod : modules) {
-        mod->process(ctx);
+    // 2. Run Pipeline (GRAPH ORDER)
+    // If Queue empty (fallback), use modules vector
+    if (!executionQueue.empty()) {
+        for (IModule* mod : executionQueue) {
+            mod->process(ctx);
+        }
+    } else {
+        for (auto& mod : modules) {
+             mod->process(ctx);
+        }
     }
     
-    // Export Detections
-    outDetections = ctx.detections;
-    
     // 3. Global Feedback (Immediate Audio)
-    // The "Risk" logic is currently in the Engine for simplicity of audio access
-    // Ideally this moves to a "FeedbackModule" that takes IAudio.
-    
     if (!ctx.isPathSafe) {
         float maxDist = 0.0f;
         for (const auto& obs : ctx.obstacles) {
@@ -168,7 +260,6 @@ bool Engine::processFrame(cv::Mat& frame, cv::Mat& debugOut, std::vector<Detecte
          cv::putText(ctx.debugOverlay, msg, textOrg, cv::FONT_HERSHEY_SIMPLEX, scale, cv::Scalar(0, 0, 255), thickness);
     }
     
-    debugOut = ctx.debugOverlay;
     frameCount++;
     return true;
 }

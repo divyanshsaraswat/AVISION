@@ -131,3 +131,100 @@ std::vector<ModuleConfig> ConfigLoader::loadModules(const std::string& filePath)
     
     return modules;
 }
+
+AppConfig ConfigLoader::loadAppConfig(const std::string& filePath) {
+    AppConfig appConfig;
+    appConfig.modules = loadModules(filePath); // Reuse existing for now
+    
+    // Naive parsing for Pipeline block
+    std::ifstream file(filePath);
+    if (!file.is_open()) return appConfig;
+    
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string json = buffer.str();
+    
+    size_t pipelinePos = json.find("\"pipeline\"");
+    if (pipelinePos == std::string::npos) return appConfig;
+    
+    // Find Pipeline Object
+    size_t pipeStart = json.find("{", pipelinePos);
+    if (pipeStart == std::string::npos) return appConfig;
+    
+    size_t pipeEnd = pipeStart;
+    int depth = 0;
+    for (size_t i = pipeStart; i < json.length(); ++i) {
+        if (json[i] == '{') depth++;
+        else if (json[i] == '}') {
+            depth--;
+            if (depth == 0) {
+                pipeEnd = i;
+                break;
+            }
+        }
+    }
+    
+    std::string pipeContent = json.substr(pipeStart, pipeEnd - pipeStart + 1);
+    
+    // 1. Nodes
+    size_t nodesPos = pipeContent.find("\"nodes\"");
+    if (nodesPos != std::string::npos) {
+        size_t arrStart = pipeContent.find("[", nodesPos);
+        size_t arrEnd = pipeContent.find("]", arrStart);
+        if (arrStart != std::string::npos && arrEnd != std::string::npos) {
+            std::string content = pipeContent.substr(arrStart+1, arrEnd - arrStart - 1);
+            std::stringstream ss(content);
+            std::string segment;
+            while(std::getline(ss, segment, ',')) {
+                 std::string val = unquote(trim(segment));
+                 if (!val.empty()) appConfig.pipeline.nodes.push_back(val);
+            }
+        }
+    }
+    
+    // 2. Edges
+    size_t edgesPos = pipeContent.find("\"edges\"");
+    if (edgesPos != std::string::npos) {
+        size_t arrStart = pipeContent.find("[", edgesPos);
+        // Find closing bracket of the Outer array
+        size_t arrEnd = arrStart;
+        depth = 0;
+        for (size_t i = arrStart; i < pipeContent.length(); ++i) {
+             if (pipeContent[i] == '[') depth++;
+             else if (pipeContent[i] == ']') {
+                 depth--;
+                 if (depth == 0) {
+                     arrEnd = i;
+                     break;
+                 }
+             }
+        }
+        
+        if (arrEnd > arrStart) {
+             // We have the outer array content: [ ["A","B"], ["B","C"] ]
+             // Manual parse internal arrays
+             size_t searchPos = arrStart + 1;
+             while (searchPos < arrEnd) {
+                 size_t subStart = pipeContent.find("[", searchPos);
+                 if (subStart == std::string::npos || subStart >= arrEnd) break;
+                 
+                 size_t subEnd = pipeContent.find("]", subStart);
+                 std::string pairContent = pipeContent.substr(subStart + 1, subEnd - subStart - 1);
+                 
+                 // Split by comma
+                 size_t comma = pairContent.find(",");
+                 if (comma != std::string::npos) {
+                     std::string u = unquote(trim(pairContent.substr(0, comma)));
+                     std::string v = unquote(trim(pairContent.substr(comma + 1)));
+                     if (!u.empty() && !v.empty()) {
+                         appConfig.pipeline.edges.push_back({u, v});
+                     }
+                 }
+                 
+                 searchPos = subEnd + 1;
+             }
+        }
+    }
+    
+    return appConfig;
+}
