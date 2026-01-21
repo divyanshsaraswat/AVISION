@@ -33,6 +33,9 @@ void GeometryEngine::process(Context& ctx) {
     std::string obsStr = std::to_string(ctx.obstacles.size()) + " obs";
     // [Geometry] 12.5 ms, Path: Safe, 5 obs
     ctx.moduleLogs.push_back("[Geometry] " + std::to_string(time_ms).substr(0,4) + " ms, Path: " + safeStr + ", " + obsStr);
+    
+    // Confidence: 1.0 (Deterministic)
+    ctx.moduleConfidence["GeometryModule"] = 1.0f;
 }
 
 void GeometryEngine::process(const cv::Mat& inputFrame, cv::Mat& debugFrame) {

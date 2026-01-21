@@ -46,4 +46,7 @@ struct Context {
     
     // 6. Logging Bus
     std::vector<std::string> moduleLogs;
+    
+    // 7. Dynamic Reliability Metadata
+    std::map<std::string, float> moduleConfidence;
 };

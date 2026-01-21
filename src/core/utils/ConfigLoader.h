@@ -9,9 +9,17 @@ struct ModuleConfig {
     std::map<std::string, std::string> params;
 };
 
+struct GateRule {
+    std::string sourceModule;
+    std::string condition; // "confidence_gt", "confidence_lt"
+    float threshold;
+    std::string targetModule; // Module to skip
+};
+
 struct PipelineConfig {
     std::vector<std::string> nodes;
     std::vector<std::pair<std::string, std::string>> edges;
+    std::vector<GateRule> gates;
 };
 
 struct AppConfig {

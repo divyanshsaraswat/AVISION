@@ -97,6 +97,16 @@ void ObjectEngine::process(Context& ctx) {
          // std::string log = "[ObjectModule] " + std::to_string(time_ms).substr(0,4) + " ms, " + std::to_string(ctx.detections.size()) + " objs";
          // ctx.moduleLogs.push_back(log);
     }
+    
+    // Confidence Report: Average confidence of detections, or 1.0 if ran successfully
+    float avgConf = 0.0f;
+    if (!ctx.detections.empty()) {
+        for (const auto& d : ctx.detections) avgConf += d.confidence;
+        avgConf /= ctx.detections.size();
+    } else {
+        avgConf = 0.5f; // Ran but found nothing (neutral)
+    }
+    ctx.moduleConfidence["ObjectModule"] = avgConf;
 }
 
 // Legacy support
@@ -183,9 +193,9 @@ std::vector<DetectedObject> ObjectEngine::detect(const cv::Mat& frame) {
         float x_factor = (float)frame.cols / currentConfig.inputWidth;
         float y_factor = (float)frame.rows / currentConfig.inputHeight;
 
-        for (int i = 0; i < rows; ++i) {
+        for (int i = 0; i < (int)rows; ++i) {
              float* classes_scores = data + 4;
-             cv::Mat scores(1, classNames.size(), CV_32FC1, classes_scores);
+             cv::Mat scores(1, (int)classNames.size(), CV_32FC1, classes_scores);
              cv::Point classIdPoint;
              double maxClassScore;
              cv::minMaxLoc(scores, 0, &maxClassScore, 0, &classIdPoint);
@@ -254,9 +264,9 @@ std::vector<DetectedObject> ObjectEngine::detect(const cv::Mat& frame) {
         int boxIdx = -1, scoreIdx = -1, classIdx = -1;
         for (size_t i=0; i<outNames.size(); i++) {
             std::string name = outNames[i];
-            if (name.find("box") != std::string::npos) boxIdx = i;
-            else if (name.find("score") != std::string::npos || name.find("conf") != std::string::npos) scoreIdx = i;
-            else if (name.find("class") != std::string::npos) classIdx = i;
+            if (name.find("box") != std::string::npos) boxIdx = (int)i;
+            else if (name.find("score") != std::string::npos || name.find("conf") != std::string::npos) scoreIdx = (int)i;
+            else if (name.find("class") != std::string::npos) classIdx = (int)i;
         }
         
         if (boxIdx >= 0 && scoreIdx >= 0 && classIdx >= 0) {

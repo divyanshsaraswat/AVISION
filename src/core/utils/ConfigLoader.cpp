@@ -226,5 +226,58 @@ AppConfig ConfigLoader::loadAppConfig(const std::string& filePath) {
         }
     }
     
+    // 3. Gates
+    size_t gatesPos = pipeContent.find("\"gates\"");
+    if (gatesPos != std::string::npos) {
+        size_t arrStart = pipeContent.find("[", gatesPos);
+        
+        // Find closing bracket
+        size_t arrEnd = arrStart;
+        depth = 0;
+        for (size_t i = arrStart; i < pipeContent.length(); ++i) {
+             if (pipeContent[i] == '[') depth++;
+             else if (pipeContent[i] == ']') {
+                 depth--;
+                 if (depth == 0) {
+                     arrEnd = i;
+                     break;
+                 }
+             }
+        }
+        
+        if (arrEnd > arrStart) {
+             size_t searchPos = arrStart + 1;
+             while (searchPos < arrEnd) {
+                 size_t objStart = pipeContent.find("{", searchPos);
+                 if (objStart == std::string::npos || objStart >= arrEnd) break;
+                 
+                 size_t objEnd = pipeContent.find("}", objStart);
+                 std::string gateContent = pipeContent.substr(objStart + 1, objEnd - objStart - 1);
+                 
+                 GateRule rule;
+                 std::stringstream ss(gateContent);
+                 std::string segment;
+                 while(std::getline(ss, segment, ',')) {
+                     size_t colon = segment.find(':');
+                     if (colon != std::string::npos) {
+                         std::string key = unquote(trim(segment.substr(0, colon)));
+                         std::string val = unquote(trim(segment.substr(colon + 1)));
+                         
+                         if (key == "if_source") rule.sourceModule = val;
+                         else if (key == "condition") rule.condition = val;
+                         else if (key == "value") rule.threshold = std::stof(val);
+                         else if (key == "then_skip") rule.targetModule = val;
+                     }
+                 }
+                 
+                 if (!rule.sourceModule.empty() && !rule.targetModule.empty()) {
+                     appConfig.pipeline.gates.push_back(rule);
+                 }
+                 
+                 searchPos = objEnd + 1;
+             }
+        }
+    }
+    
     return appConfig;
 }

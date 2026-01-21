@@ -157,17 +157,73 @@ bool Engine::processFrame(cv::Mat& frame, Context& ctx) {
     ctx.timestamp = frameCount * 0.033; // Approx
     ctx.debugOverlay = frame.clone(); // Base for drawing
     
+    // METRICS: Start Frame
+    metrics.startFrame(frameCount);
+    
+    // Phase 3: Dynamic Skipping Set
+    std::vector<std::string> skippedModules;
+    
     // 2. Run Pipeline (GRAPH ORDER)
     // If Queue empty (fallback), use modules vector
     if (!executionQueue.empty()) {
         for (IModule* mod : executionQueue) {
+            std::string name = mod->getName();
+            
+            // CHECK GATES: Is this module skipped?
+            bool isSkipped = false;
+            for (const auto& s : skippedModules) {
+                if (s == name) { isSkipped = true; break; }
+            }
+            
+            if (isSkipped) {
+                metrics.recordSkip(name);
+                continue;
+            }
+
+            metrics.startModule(name);
             mod->process(ctx);
+            
+            float conf = 0.0f;
+            if (ctx.moduleConfidence.count(name)) {
+                conf = ctx.moduleConfidence[name];
+            }
+            metrics.endModule(name, conf);
+            
+            // EVALUATE GATES: Should we skip downstream?
+            for (const auto& gate : pipelineConfig.gates) {
+                if (gate.sourceModule == name) {
+                    bool conditionMet = false;
+                    if (gate.condition == "confidence_gt") {
+                        if (conf > gate.threshold) conditionMet = true;
+                    } 
+                    else if (gate.condition == "confidence_lt") {
+                        if (conf < gate.threshold) conditionMet = true;
+                    }
+                    
+                    if (conditionMet) {
+                        skippedModules.push_back(gate.targetModule);
+                        // Optional: Log skipping decision to console or debug overlay?
+                        // std::cout << "GATE: Skipping " << gate.targetModule << " because " << name << " conf " << conf << std::endl;
+                    }
+                }
+            }
         }
     } else {
         for (auto& mod : modules) {
+             metrics.startModule(mod->getName());
              mod->process(ctx);
+             
+             float conf = 0.0f;
+             if (ctx.moduleConfidence.count(mod->getName())) {
+                 conf = ctx.moduleConfidence[mod->getName()];
+             }
+             metrics.endModule(mod->getName(), conf);
         }
     }
+    
+    // METRICS: End Frame & Log
+    metrics.endFrame();
+    ctx.moduleLogs.push_back(metrics.toJson());
     
     // 3. Global Feedback (Immediate Audio)
     if (!ctx.isPathSafe) {
@@ -232,20 +288,20 @@ bool Engine::processFrame(cv::Mat& frame, Context& ctx) {
     };
 
     // 1. Navigation Command (Green) - Bottom most text
-    drawMessage(ctx.guidanceCommand, cv::Scalar(0, 255, 0), 0.8);
+    drawMessage(ctx.guidanceCommand, cv::Scalar(0, 255, 0), 0.8f);
 
     // 2. Scene Info (Yellow) - Above Nav
-    drawMessage(ctx.sceneLabel, cv::Scalar(0, 255, 255), 0.7);
+    drawMessage(ctx.sceneLabel, cv::Scalar(0, 255, 255), 0.7f);
 
     // 3. Edge Safety Alert (Red Bar)
     if (!ctx.edgeSafetyAlert.empty()) {
-        drawMessage(ctx.edgeSafetyAlert, cv::Scalar(0, 0, 255), 0.8);
+        drawMessage(ctx.edgeSafetyAlert, cv::Scalar(0, 0, 255), 0.8f);
     }
 
     // 4. Critical Alert (Red) - User requested: Small font, Bottom Right
     if (!ctx.activeAlert.empty()) {
          std::string msg = ctx.activeAlert;
-         float scale = 0.6; // Small font
+         float scale = 0.6f; // Small font
          int thickness = 2;
          int baseline = 0;
          cv::Size textSize = cv::getTextSize(msg, cv::FONT_HERSHEY_SIMPLEX, scale, thickness, &baseline);

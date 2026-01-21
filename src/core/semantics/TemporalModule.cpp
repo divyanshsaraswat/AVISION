@@ -38,7 +38,7 @@ void TemporalModule::process(Context& ctx) {
             
             if (iou > 0.3f && iou > bestIoU) { // Threshold 0.3 for matching
                 bestIoU = iou;
-                bestTrackIdx = j;
+                bestTrackIdx = (int)j;
             }
         }
 

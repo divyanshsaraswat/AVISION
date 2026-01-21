@@ -77,5 +77,7 @@ void SceneUnderstandingModule::process(Context& ctx) {
         // Log
         std::string log = "[Scene] " + std::to_string(time_ms).substr(0,4) + " ms, " + scene + " (" + std::to_string(conf).substr(0,4) + ")";
         ctx.moduleLogs.push_back(log);
+        
+        ctx.moduleConfidence["SceneUnderstandingModule"] = (float)conf;
     }
 }

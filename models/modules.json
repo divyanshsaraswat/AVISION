@@ -28,6 +28,14 @@
                 "ObjectModule",
                 "TemporalModule"
             ]
+        ],
+        "gates": [
+            {
+                "if_source": "GeometryModule",
+                "condition": "confidence_gt",
+                "value": 0.85,
+                "then_skip": "ObjectModule"
+            }
         ]
     },
     "modules": [

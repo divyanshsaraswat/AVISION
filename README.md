@@ -89,6 +89,7 @@ This project follows a strict **Systems Engineering** approach to ensure safety 
 *   **Location**: `src/core/`
 *   **Dependencies**: Pure C++ STL, OpenCV (Core/ImgProc). **NO OS dependencies.**
 *   **Responsibility**:
+    *   **Graph Execution Engine**: Dynamic pipeline management using DAG (Directed Acyclic Graph) & Topological Sorting.
     *   **Geometry Engine**: Analyses the frame to find walkable ground and obstacles.
     *   **Distance Engine**: Estimates "Time-to-Collision" using monocular cues.
     *   **Risk Engine**: Decides *if* and *when* to alert the user (Safety Logic).
@@ -110,7 +111,23 @@ This project follows a strict **Systems Engineering** approach to ensure safety 
 
 ## 🔬 Deep Dive: Algorithms & Logic
 
-### 1. Object Engine (`src/core/semantics/ObjectEngine.cpp`)
+### 1. The "Graph Engine" (Core Architecture)
+As of v0.5.0, A-Vision runs on a **Graph-Based Execution Engine**, allowing for flexible reconfiguration without recompiling.
+*   **Configuration (`models/modules.json`)**: Defines `nodes` (modules) and `edges` (dependencies).
+*   **Topological Sort**: The Engine uses Kahn's Algorithm to flatten the DAG into a linear execution queue, ensuring dependencies are respected (e.g., `Object -> Temporal`).
+*   **Execution Gates (Phase 3)**:
+    *   **Logic**: `If SourceModule.confidence > Threshold -> Skip TargetModule`.
+    *   **Goal**: Dynamic pruning. For example, if `GeometryModule` is 100% unsure about the path, we can skip the heavy `ObjectModule` to save power, or vice versa.
+    *   **Example**: `If Geometry > 0.85 (Safe) -> Skip Object Detection`.
+
+### 2. Unified Metrics Layer
+We implement a transparent observability layer to solve the "Measurement Illusion".
+*   **Scheduler FPS**: The raw tick rate of the loop (e.g., 600Hz).
+*   **Effective FPS**: The rate of *heavy* module execution (e.g., 15Hz).
+*   **Confidence Scores**: Every module reports a `0.0-1.0` confidence metric, enabling dynamic downstream logic.
+*   **Heavy Module Tracking**: Logs determining *why* a frame was slow (e.g., `["ObjectModule", "DepthModule"]`).
+
+### 3. Object Engine (`src/core/semantics/ObjectEngine.cpp`)
 The "Semantic Eye" of the system. It wraps OpenCV DNN to provide generic object detection.
 
 *   **Model Support**: Factory Pattern based on `ModelType` enum (`SSD_MOBILENET`, `YOLO_V8`).
@@ -172,6 +189,15 @@ The system uses a "Silence by Default" philosophy, alerting only on positive det
 *   **CRITICAL**: High-pitch beep (2000Hz).
 *   **WARNING**: Mid-pitch beep (1000Hz).
 *   **INFO**: Low-pitch beep (Startup/Status).
+
+### 8. Performance & Optimization
+*   **Graph Pipeline**: Modules are executed in a dependency-aware order (Topological Sort).
+*   **Async Processing**:
+    *   **Depth**: Monocular Depth (MiDaS) runs in a background `std::future`, updating the depth map asynchronously (5 FPS) while the main loop runs at 30 FPS.
+    *   **Audio**: Alerts are spawned in detached `std::thread`s to prevent UI blocking.
+*   **Velocity Prediction**: `TemporalModule` uses linear velocity estimation to interpolate object positions during skipped frames, providing fluid visual feedback (30 FPS visual smoothness from 5 FPS detection).
+*   **Conditional Pruning**: The **Execution Gates** system skips heavy modules based on the confidence of lighter upstream modules (e.g., Geometry).
+
 
 ---
 
@@ -237,6 +263,8 @@ make
 *   **Phase 5 (Done)**: Depth Estimation Integration (MiDaS) & Safety Fusion.
 *   **Phase 6 (Done)**: Advanced Safety Modules (Temporal Stabilization, Free Space Navigation, Drop-off Detection).
 *   **Phase 7 (Done)**: Semantic Intelligence (Scene Understanding, OCR, Path Guidance).
+*   **Phase 8 (Done)**: Pipeline Graph Architecture (DAG), Async Inference, & Velocity Prediction.
+*   **Phase 9 (Done)**: Unified Metrics Layer, Confidence Scores, & Execution Gates.
 
 ---
 

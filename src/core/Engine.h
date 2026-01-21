@@ -8,6 +8,7 @@
 #include "platform/interfaces/IAudio.h"
 #include "kernel/IModule.h"
 #include "utils/ConfigLoader.h" // For PipelineConfig definition
+#include "utils/MetricsCollector.h"
 
 // Note: Specific Engine headers removed from here to reduce coupling
 // Main.cpp will include them to instantiate and pass to Engine.
@@ -47,6 +48,7 @@ private:
     
     void buildExecutionGraph();
 
+    MetricsCollector metrics;
     bool isRunning = false;
     int frameCount = 0;
 };
