@@ -84,12 +84,18 @@ build\Release\AVisionCLI.exe --video "path/to/video.mp4"
 ### 🖼️ Image Tools (v1.2)
 A set of **Deterministic & Classical** tools for image manipulation. No generative AI, always reproducible.
 
-**1. Segmentation (ROI-based)**
+**1. Segmentation (ROI or Smart Click)**
 ```cmd
+# Option A: Interactive "Smart Click" (Recommended)
+build\Release\AVisionCLI.exe image segment --input raw.jpg --interactive --output mask.png
+# (Window opens -> Click object -> Spacebar to finish)
+
+# Option B: Explicit Bounding Box
 build\Release\AVisionCLI.exe image segment --input raw.jpg --bbox 100,100,200,200 --output mask.png
 ```
-*   **Method**: `cv::grabCut` (Graph Cut).
-*   **Input**: Explicit Bounding Box or `--interactive` selection.
+*   **Method**: `cv::grabCut` (Graph Cut Optimization).
+*   **Constraint**: CPU-Only, Deterministic (No Neural Networks).
+*   **Interaction**: Supports **Left Click** for point-based selection or **Drag** for rectangular ROI.
 
 **2. Inpainting (Classical)**
 ```cmd
