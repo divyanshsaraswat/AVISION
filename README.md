@@ -14,6 +14,7 @@
 ---
 
 ## Table of Contents
+- [📊 Performance Benchmarks (v1.2.0)](#-performance-benchmarks-v120)
 - [🚀 Getting Started](#-getting-started)
 - [🧠 System Architecture: "Portable Core"](#-system-architecture-portable-core)
 - [🔬 Deep Dive: Algorithms & Logic](#-deep-dive-algorithms--logic)
@@ -21,6 +22,19 @@
 - [📂 Project Structure](#-project-structure)
 - [🌍 Platform Support Status](#-platform-support-status)
 - [🔮 Roadmap](#-roadmap)
+
+---
+
+## 📊 Performance Benchmarks (v1.2.0)
+
+| Metric | Value | Description |
+| :--- | :--- | :--- |
+| **Average Effective FPS** | **37.3 FPS** | User Perception Rate. |
+| **Skip Ratio** | **80.4%** | Frames optimized via Execution Gates. |
+| **P95 Latency (AI)** | **99.8 ms** | Max inference latency (ObjectModule). |
+| **Memory Peak** | **594 MB** | Max RAM usage. |
+
+*Tested on Windows 11 x64.*
 
 ---
 
@@ -265,19 +279,6 @@ make
 *   **Phase 7 (Done)**: Semantic Intelligence (Scene Understanding, OCR, Path Guidance).
 *   **Phase 8 (Done)**: Pipeline Graph Architecture (DAG), Async Inference, & Velocity Prediction.
 *   **Phase 9 (Done)**: Unified Metrics Layer, Confidence Scores, & Execution Gates.
-
----
-
-## 📊 Performance Benchmarks (v1.2.0)
-
-| Metric | Value | Description |
-| :--- | :--- | :--- |
-| **Average Effective FPS** | **37.3 FPS** | User Perception Rate. |
-| **Skip Ratio** | **80.4%** | Frames optimized via Execution Gates. |
-| **P95 Latency (AI)** | **99.8 ms** | Max inference latency (ObjectModule). |
-| **Memory Peak** | **594 MB** | Max RAM usage. |
-
-*Tested on Windows 11 x64.*
 
 ---
 
