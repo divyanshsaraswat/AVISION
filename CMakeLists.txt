@@ -60,6 +60,7 @@ add_custom_command(TARGET AVision POST_BUILD
 
 add_executable(AVisionCLI
     src/video_cli.cpp
+    src/ImageCLI.cpp
     src/core/Engine.cpp
     src/core/semantics/ObjectEngine.cpp
     src/core/semantics/TemporalModule.cpp

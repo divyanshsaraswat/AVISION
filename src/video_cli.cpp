@@ -18,11 +18,17 @@
 #include "core/geometry/PathGuidanceModule.h"
 #include "core/semantics/SceneUnderstandingModule.h"
 
+#include "ImageCLI.h" // Added for Image Subcommands
+
 // Note: Config loading should ideally be centralized.
 // For now, we assume modules load their own defaults or logic in init()
 // OR we add specific init-with-config logic to modules before adding them.
 
 int main(int argc, char** argv) {
+    if (argc > 1 && std::string(argv[1]) == "image") {
+        return ImageCLI::run(argc, argv);
+    }
+
     if (argc < 3) {
         std::cerr << "Usage: AVisionCLI.exe --video <path_to_video_file>" << std::endl;
         return 1;

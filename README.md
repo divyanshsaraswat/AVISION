@@ -81,6 +81,24 @@ You can now process video files directly using the new CLI tool. This output inc
 build\Release\AVisionCLI.exe --video "path/to/video.mp4"
 ```
 
+### 🖼️ Image Tools (v1.2)
+A set of **Deterministic & Classical** tools for image manipulation. No generative AI, always reproducible.
+
+**1. Segmentation (ROI-based)**
+```cmd
+build\Release\AVisionCLI.exe image segment --input raw.jpg --bbox 100,100,200,200 --output mask.png
+```
+*   **Method**: `cv::grabCut` (Graph Cut).
+*   **Input**: Explicit Bounding Box or `--interactive` selection.
+
+**2. Inpainting (Classical)**
+```cmd
+build\Release\AVisionCLI.exe image fill --input raw.jpg --mask mask.png --output clean.jpg
+```
+*   **Method**: `cv::inpaint` (Telea/Navier-Stokes).
+*   **Goal**: Remove distractors or repair defects using surrounding pixels.
+*   *Note: Generative fill is intentionally not supported in v1.5.*
+
 **Features:**
 *   **Dual-Rate Processing**: Detects objects at ~10 FPS, estimates depth at 1 FPS (Optimized).
 *   **Depth Heatmap**: Visualizes user's distance to environment.
