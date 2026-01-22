@@ -268,4 +268,17 @@ make
 
 ---
 
+## 📊 Performance Benchmarks (v1.2.0)
+
+| Metric | Value | Description |
+| :--- | :--- | :--- |
+| **Average Effective FPS** | **37.3 FPS** | User Perception Rate. |
+| **Skip Ratio** | **80.4%** | Frames optimized via Execution Gates. |
+| **P95 Latency (AI)** | **99.8 ms** | Max inference latency (ObjectModule). |
+| **Memory Peak** | **594 MB** | Max RAM usage. |
+
+*Tested on Windows 11 x64.*
+
+---
+
 > **Philosophy**: "The system must never surprise the user." Safety > Features.

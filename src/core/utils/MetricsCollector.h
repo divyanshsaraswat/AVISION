@@ -79,6 +79,10 @@ public:
         std::stringstream ss;
         ss << "{";
         ss << "\"frame_id\":" << currentFrame.frameId << ",";
+
+        // Memory Usage
+        double memMB = SystemUtils::getMemoryUsage() / 1024.0 / 1024.0;
+        ss << "\"sys_mem_mb\":" << std::fixed << std::setprecision(1) << memMB << ",";
         
         // Scheduler FPS (Tick Rate)
         double schedulerFPS = (1000.0 / (currentFrame.totalLatencyMs > 0 ? currentFrame.totalLatencyMs : 0.01));
