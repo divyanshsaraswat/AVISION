@@ -97,7 +97,6 @@ build\Release\AVisionCLI.exe image fill --input raw.jpg --mask mask.png --output
 ```
 *   **Method**: `cv::inpaint` (Telea/Navier-Stokes).
 *   **Goal**: Remove distractors or repair defects using surrounding pixels.
-*   *Note: Generative fill is intentionally not supported in v1.5.*
 
 **Features:**
 *   **Dual-Rate Processing**: Detects objects at ~10 FPS, estimates depth at 1 FPS (Optimized).
