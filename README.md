@@ -45,7 +45,7 @@
 *   **CMake**: Build system generator (v3.14+).
 *   **C++ Compiler**: MSVC (Visual Studio 2022) on Windows, or GCC/Clang on Linux.
 
-> **Note**: You do NOT need to manually install OpenCV. The project handles dependencies automatically via `vcpkg`.
+> **Note**: You do NOT need to manually install OpenCV or ONNX Runtime. The project handles dependencies automatically via `vcpkg`.
 
 ### 🛠️ One-Click Setup (Windows)
 
@@ -93,16 +93,19 @@ build\Release\AVisionCLI.exe image segment --input raw.jpg --interactive --outpu
 # Option B: Explicit Bounding Box
 build\Release\AVisionCLI.exe image segment --input raw.jpg --bbox 100,100,200,200 --output mask.png
 ```
-*   **Method**: `cv::grabCut` (Graph Cut Optimization).
-*   **Constraint**: CPU-Only, Deterministic (No Neural Networks).
-*   **Interaction**: Supports **Left Click** for point-based selection or **Drag** for rectangular ROI.
+*   **Method**: `MobileSAM` (AI-based Segment Anything Model) via **ONNX Runtime**.
+*   **Architecture**: Encoder (ViT) + Decoder (Transformer).
+*   **Fallback**: `cv::grabCut` (if models missing).
+*   **Interaction**: Supports **Smart Click** (AI) or **Bounding Box**.
 
-**2. Inpainting (Classical)**
+**2. Generative Fill (AI Inpainting)**
 ```cmd
-build\Release\AVisionCLI.exe image fill --input raw.jpg --mask mask.png --output clean.jpg
+build\Release\AVisionCLI.exe image fill --input raw.jpg --mask mask_mask.png --output filled.jpg --padding 50
 ```
-*   **Method**: `cv::inpaint` (Telea/Navier-Stokes).
-*   **Goal**: Remove distractors or repair defects using surrounding pixels.
+*   **Method**: `Big-LaMa` (Large Mask Inpainting) via **ONNX Runtime**.
+*   **Goal**: Hallucinate realistic background to fill missing regions.
+*   **Input**: Requires a **Binary Mask** (White=Fill, Black=Keep). The `segment` command above automatically generates this as `[output]_mask.png`.
+*   **Fallback**: `cv::inpaint` (Telea/Navier-Stokes) if model is missing.
 
 **Features:**
 *   **Dual-Rate Processing**: Detects objects at ~10 FPS, estimates depth at 1 FPS (Optimized).
@@ -302,6 +305,7 @@ make
 *   **Phase 7 (Done)**: Semantic Intelligence (Scene Understanding, OCR, Path Guidance).
 *   **Phase 8 (Done)**: Pipeline Graph Architecture (DAG), Async Inference, & Velocity Prediction.
 *   **Phase 9 (Done)**: Unified Metrics Layer, Confidence Scores, & Execution Gates.
+*   **Phase 10 (Done)**: AI-Powered Image Tools (MobileSAM + Big-LaMa Generative Fill).
 
 ---
 

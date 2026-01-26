@@ -7,7 +7,8 @@
             "features": [
                 "highgui"
             ]
-        }
+        },
+        "onnxruntime"
     ],
     "builtin-baseline": "25b458671af03578e6a34edd8f0d1ac85e084df4"
 }

@@ -114,6 +114,21 @@
                 "classesPath": "build/Release/models/scene_classes.txt",
                 "interval": "40"
             }
+        },
+        {
+            "name": "SegmentationModule",
+            "enabled": true,
+            "params": {
+                "encoderPath": "build/Release/models/mobile_sam_encoder.onnx",
+                "decoderPath": "build/Release/models/mobile_sam_decoder.onnx"
+            }
+        },
+        {
+            "name": "FillModule",
+            "enabled": true,
+            "params": {
+                "modelPath": "build/Release/models/big_lama.onnx"
+            }
         }
     ]
 }

@@ -12,7 +12,10 @@ $urlMap = @{
     "resnet18_places365.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/resnet18_places365.onnx";
     "scene_classes.txt" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/googlenet_paces365_scene_classes.txt";
     "text_detection_db.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/text_detection_db.onnx";
-    "text_recognition_crnn.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/text_recognition_crnn.onnx"
+    "text_recognition_crnn.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/text_recognition_crnn.onnx";
+    "mobile_sam_encoder.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/mobile_sam_encoder.onnx";
+    "mobile_sam_decoder.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/mobile_sam_decoder.onnx";
+    "big_lama.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/big-lama-standalone.onnx"
 }
 
 if (-not (Test-Path $modelsDir)) {
@@ -92,7 +95,7 @@ if (Test-Path $jsonFile) {
                 }
 
                 # Setup OCR specific params
-                foreach ($key in @("detectModel", "recogModel")) {
+                foreach ($key in @("detectModel", "recogModel", "encoderPath", "decoderPath")) {
                     if ($params.$key) {
                         $path = $params.$key
                         $filename = Split-Path $path -Leaf

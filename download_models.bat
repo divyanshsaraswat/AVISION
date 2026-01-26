@@ -133,6 +133,38 @@ if exist "models\%DEPTH_FILE%" (
 )
 
 echo.
+echo [SETUP] Verifying/Downloading MobileSAM Model (Fused)...
+set SAM_FILE=mobile_sam.onnx
+set ENCODER_URL=https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/mobile_sam_encoder.onnx
+set DECODER_URL=https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/mobile_sam_decoder.onnx
+
+set DECODER_FILE=mobile_sam_decoder.onnx
+
+if exist "models\%ENCODER_FILE%" (
+    echo [INFO] MobileSAM Encoder already exists.
+) else (
+    echo [DOWNLOAD] Downloading MobileSAM Encoder...
+    curl -L -o models/%ENCODER_FILE% %ENCODER_URL%
+)
+
+if exist "models\%DECODER_FILE%" (
+    echo [INFO] MobileSAM Decoder already exists.
+) else (
+    echo [DOWNLOAD] Downloading MobileSAM Decoder...
+    curl -L -o models/%DECODER_FILE% %DECODER_URL%
+)
+
+set LAMA_FILE=big_lama.onnx
+set LAMA_URL=https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/big-lama-standalone.onnx
+
+if exist "models\%LAMA_FILE%" (
+    echo [INFO] Big-LaMa already exists.
+) else (
+    echo [DOWNLOAD] Downloading Big-LaMa...
+    curl -L -o models/%LAMA_FILE% %LAMA_URL%
+)
+
+echo.
 echo [SUCCESS] Setup complete!
 echo Selected Model: %MODEL_FILE%
 echo Configuration saved to models/selected_model.json

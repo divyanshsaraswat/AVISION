@@ -6,6 +6,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <filesystem>
 #include <sstream>
+#include "core/segmentation/SegmentationModule.h"
 
 // Helper to check if file exists
 static bool fileExists(const std::string& path) {
@@ -79,10 +80,8 @@ int ImageCLI::handleSegment(int argc, char** argv) {
         else if (arg == "--overwrite") overwrite = true;
     }
 
-    if (inputPath.empty() || outputPath.empty()) {
-        std::cerr << "Usage: avision image segment --input <img.jpg> (--bbox x,y,w,h | --seed x,y[,thresh] | --interactive) --output <mask.png>\n";
-        return 1;
-    }
+    // Validation moved to later stages
+    // if (inputPath.empty() || outputPath.empty()) ...
 
     if (!overwrite && fileExists(outputPath)) {
         std::cerr << "Error: Output file exists (use --overwrite)\n";
@@ -204,115 +203,92 @@ int ImageCLI::handleSegment(int argc, char** argv) {
         if (vals.size() >= 3) threshold = vals[2];
     }
 
-    if (roi.area() == 0 && seedPt.x == -1 && !interactive) {
-        std::cerr << "Error: Must specify --bbox, --interactive, or --seed\n";
+    if (inputPath.empty()) {
+        std::cerr << "Usage: avision image segment --input <img.jpg> (--bbox x,y,w,h | --seed x,y[,thresh] | --interactive) [--output <mask.png>]\n";
         return 1;
+    }
+
+    if (outputPath.empty()) {
+        outputPath = "output.png";
     }
 
     cv::Mat binMask;
 
-    // SCENARIO 1: Smart Click (Point-based GrabCut)
-    if (seedPt.x != -1) {
-        if (seedPt.x < 0 || seedPt.x >= img.cols || seedPt.y < 0 || seedPt.y >= img.rows) {
-            std::cerr << "Error: Seed point out of bounds\n";
-            return 1;
-        }
+    // --- SEGMENTATION MODULE INTEGRATION ---
+    avision::SegmentationModule segModule;
+    binMask = segModule.segment(img, roi, seedPt);
 
-        std::cout << "[Segment] Running Point-Initialized GrabCut (Classical)... please wait.\n";
-
-        // Initialize Mask with PROBABLE FOREGROUND
-        // We assume the user clicked an object that likely occupies a good chunk of the image.
-        // If we start with PR_BGD, GrabCut is too lazy to expand.
-        cv::Mat mask(img.size(), CV_8UC1, cv::Scalar(cv::GC_PR_FGD));
-
-        // 1. Mark the seed point as SURE Foreground (Anchor)
-        cv::circle(mask, seedPt, 5, cv::Scalar(cv::GC_FGD), -1);
-
-        // 2. Mark borders as SURE Background (Constraint)
-        // Critical: We must define what is definitely NOT the object.
-        // We assume the object is not touching ALL borders.
-        int border = 2; // 2px border
-        cv::rectangle(mask, cv::Point(0,0), cv::Point(img.cols-1, img.rows-1), cv::Scalar(cv::GC_BGD), border);
-        
-        // 3. Mark corners aggressively? No, simple border is enough for now.
-
-        // 3. Run GrabCut
-        cv::Mat bgModel, fgModel;
-        try {
-            // Increase iterations to 7 for better convergence
-            cv::grabCut(img, mask, cv::Rect(), bgModel, fgModel, 7, cv::GC_INIT_WITH_MASK);
-        } catch (const cv::Exception& e) {
-             std::cerr << "GrabCut Error: " << e.what() << "\n";
-             return 1;
-        }
-
-        // Convert result: FG + PR_FGD -> 255
-        binMask = (mask == cv::GC_PR_FGD) | (mask == cv::GC_FGD);
-        binMask = binMask * 255; 
-        
-        std::cout << "[Segment] Segmentation Complete.\n";
-    }
-    // SCENARIO 2: GrabCut (ROI)
-    else {
-        if (interactive) {
-            roi = cv::selectROI("Select ROI (Space/Enter to confirm)", img);
-            cv::destroyWindow("Select ROI (Space/Enter to confirm)");
-        } else {
-           // roi already parsed
-        }
-
-        if (roi.area() == 0) {
-             std::cerr << "Error: Invalid ROI\n";
-             return 1;
-        }
-
-        // Deterministic Segmentation (GrabCut)
-        cv::Mat mask = cv::Mat::zeros(img.size(), CV_8UC1);
-        cv::Mat bgModel, fgModel;
-        
-        cv::grabCut(img, mask, roi, bgModel, fgModel, 5, cv::GC_INIT_WITH_RECT);
-
-        // Convert GrabCut classes to binary mask
-        cv::Mat finalMask = (mask == cv::GC_PR_FGD) | (mask == cv::GC_FGD);
-        binMask = finalMask * 255; 
-    }
-
-    // Resolve Output Path (Default to next to input or CWD?) 
-    // User requested "root file to access... in build/Release".
-    // If output path is just filename, maybe put it next to exe too?
-    // Let's keep output strict unless relative.
-    
-    // Actually, let's allow CWD output but if input was resolved to exe dir, maybe user expects output there?
-    // Let's stick to CWD for output unless fully specified, BUT verify if this matches "root file access" request.
-    // The request likely meant INPUT files.
-
-    // Save
-    if (cv::imwrite(outputPath, binMask)) {
-        std::cout << "[Segment] Saved mask to: " << outputPath << "\n";
-        return 0;
-    } else {
-        std::cerr << "Error: Failed to write output\n";
+    if (binMask.empty()) {
+        std::cerr << "Error: Segmentation failed (backend returned empty mask).\n";
         return 1;
     }
+
+    std::cout << "[Segment] Mask Size: " << binMask.size() << ", Non-Zero: " << cv::countNonZero(binMask) << "\n";
+
+    // Apply Mask Overlay (Red Overlay on Input Image)
+    cv::Mat result = img.clone();
+    cv::Mat overlay;
+    result.copyTo(overlay);
+    
+    // Create red mask: B=0, G=0, R=255
+    for(int y=0; y<binMask.rows; ++y) {
+        for(int x=0; x<binMask.cols; ++x) {
+            if(binMask.at<uchar>(y,x) > 0) {
+                // Set red channel to 255, blend with original
+                cv::Vec3b& pixel = overlay.at<cv::Vec3b>(y,x);
+                pixel[2] = 255; // Red
+            }
+        }
+    }
+    
+    // Blend: 0.7 * Original + 0.3 * RedMask
+    cv::addWeighted(overlay, 0.4, result, 0.6, 0.0, result);
+
+    // Save Output
+    if (cv::imwrite(outputPath, result)) {
+        std::cout << "Saved segmented image (overlay) to: " << outputPath << "\n";
+        
+        // Also save the binary mask for 'fill' command usage
+        std::string maskPath = outputPath;
+        size_t lastDot = maskPath.find_last_of(".");
+        if (lastDot != std::string::npos) {
+            maskPath.insert(lastDot, "_mask");
+        } else {
+            maskPath += "_mask.png";
+        }
+        
+        if (cv::imwrite(maskPath, binMask)) {
+             std::cout << "Saved binary mask to: " << maskPath << "\n";
+        }
+    } else {
+        std::cerr << "Error: Failed to save to " << outputPath << "\n";
+        return 1;
+    }
+
+    return 0;
 }
+
+#include "core/filling/FillModule.h"
+
+// ... (previous includes)
 
 int ImageCLI::handleFill(int argc, char** argv) {
     std::string inputPath, maskPath, outputPath;
-    std::string mode = "remove"; // default
+    std::string mode = "smart"; // default
     bool overwrite = false;
+    int padding = 50;
 
     for (int i = 3; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--input" && i+1 < argc) inputPath = argv[++i];
         else if (arg == "--mask" && i+1 < argc) maskPath = argv[++i];
         else if (arg == "--output" && i+1 < argc) outputPath = argv[++i];
-        else if (arg == "--mode" && i+1 < argc) mode = argv[++i];
+        else if (arg == "--padding" && i+1 < argc) padding = std::stoi(argv[++i]);
         else if (arg == "--overwrite") overwrite = true;
     }
 
     if (inputPath.empty() || maskPath.empty() || outputPath.empty()) {
-         std::cerr << "Usage: avision image fill --input <img.jpg> --mask <mask.png> --output <filled.jpg>\n";
-         std::cerr << "Generative fill is intentionally deferred to a future release.\n";
+         std::cerr << "Usage: avision image fill --input <img.jpg> --mask <mask.png> --output <filled.jpg> [--padding 50]\n";
          return 1;
     }
     
@@ -321,8 +297,25 @@ int ImageCLI::handleFill(int argc, char** argv) {
         return 1;
     }
 
-    cv::Mat img = cv::imread(inputPath);
-    cv::Mat mask = cv::imread(maskPath, cv::IMREAD_GRAYSCALE); // Read as simple mask
+    // Smart Path Resolution (Copied from handleSegment)
+    namespace fs = std::filesystem;
+    fs::path inPath(inputPath);
+    if (!fs::exists(inPath)) {
+        fs::path exeDir = fs::path(argv[0]).parent_path();
+        fs::path tryPath = exeDir / inputPath;
+        if (fs::exists(tryPath)) { inPath = tryPath; }
+    }
+    
+    // Check mask too
+    fs::path mPath(maskPath);
+    if (!fs::exists(mPath)) {
+         fs::path exeDir = fs::path(argv[0]).parent_path();
+         fs::path tryPath = exeDir / maskPath;
+         if (fs::exists(tryPath)) { mPath = tryPath; }
+    }
+
+    cv::Mat img = cv::imread(inPath.string());
+    cv::Mat mask = cv::imread(mPath.string(), cv::IMREAD_GRAYSCALE); // Read as simple mask
 
     if (img.empty() || mask.empty()) {
         std::cerr << "Error: Could not open input or mask.\n";
@@ -334,16 +327,9 @@ int ImageCLI::handleFill(int argc, char** argv) {
         return 1;
     }
 
-    cv::Mat result;
-    double radius = 3.0;
-    int flags = cv::INPAINT_TELEA;
-
-    if (mode == "repair") {
-        flags = cv::INPAINT_NS; // Navier-Stokes often better for structural repair
-        radius = 5.0;
-    }
-
-    cv::inpaint(img, mask, result, radius, flags);
+    // --- FILL MODULE INTEGRATION ---
+    avision::FillModule fillModule;
+    cv::Mat result = fillModule.fill(img, mask, padding);
 
     if (cv::imwrite(outputPath, result)) {
         std::cout << "[Fill] Saved filled image to: " << outputPath << "\n";
