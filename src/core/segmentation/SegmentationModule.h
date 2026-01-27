@@ -20,6 +20,11 @@ public:
      */
     cv::Mat segment(const cv::Mat& image, const cv::Rect& roi, const cv::Point& seed = cv::Point(-1, -1));
 
+    /**
+     * @brief Perform segmentation with multiple prompts (points and/or box).
+     */
+    cv::Mat segment(const cv::Mat& image, const std::vector<cv::Point>& points, const std::vector<int>& labels, const cv::Rect& box = cv::Rect());
+
 private:
     std::shared_ptr<ISegmentationBackend> primaryBackend;
     std::shared_ptr<ISegmentationBackend> fallbackBackend;

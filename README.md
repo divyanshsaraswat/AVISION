@@ -88,7 +88,14 @@ A set of **Deterministic & Classical** tools for image manipulation. No generati
 ```cmd
 # Option A: Interactive "Smart Click" (Recommended)
 build\Release\AVisionCLI.exe image segment --input raw.jpg --interactive --output mask.png
-# (Window opens -> Click object -> Spacebar to finish)
+
+**Controls:**
+*   **Left Click**: Add **Foreground** Point (Green).
+*   **Right Click**: Add **Background** Point (Red).
+*   **Left Drag**: Draw **Bounding Box** (Blue).
+*   **Space / Enter**: Run Segmentation.
+*   **'c'**: Clear all prompts.
+*   **'s'**: Save mask & exit.
 
 # Option B: Explicit Bounding Box
 build\Release\AVisionCLI.exe image segment --input raw.jpg --bbox 100,100,200,200 --output mask.png

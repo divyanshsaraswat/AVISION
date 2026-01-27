@@ -25,7 +25,7 @@ cv::Mat FillModule::fill(const cv::Mat& image, const cv::Mat& mask, int padding)
 
     // 0. Dilate Mask (Critical for LaMa to avoid ghosting)
     // We need to cover the boundary logic so the model sees background context, not object edge.
-    int dilateSize = 15; // 15px expansion
+    int dilateSize = 5; // Reduced from 15 to 5 to preserve more background detail
     cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(2 * dilateSize + 1, 2 * dilateSize + 1), cv::Point(dilateSize, dilateSize));
     cv::Mat dilatedMask;
     cv::dilate(grayMask, dilatedMask, element);
@@ -44,15 +44,20 @@ cv::Mat FillModule::fill(const cv::Mat& image, const cv::Mat& mask, int padding)
     cv::Rect bbox = cv::boundingRect(points);
     
     // Add Padding
-    // Strategy: For detailed structures, TIGHTER padding often yields SHARPER results 
-    // because the model sees the texture at a higher relative frequency.
-    // However, we need *some* context.
-    // Let's use the user-provided padding but clamping it to ensure we don't zoom out too much.
+    // Strategy: For detailed textures, the model needs CONTEXT.
+    // If the padding is too tight, it sees only the hole and no texture to copy.
+    // Force a minimum padding proportional to the hole size.
+    int maxHoleDim = std::max(bbox.width, bbox.height);
+    int minPadding = maxHoleDim / 2; // e.g. 50% context
     
-    bbox.x = std::max(0, bbox.x - padding);
-    bbox.y = std::max(0, bbox.y - padding);
-    bbox.width = std::min(image.cols - bbox.x, bbox.width + 2 * padding);
-    bbox.height = std::min(image.rows - bbox.y, bbox.height + 2 * padding);
+    // User padding is a minimum base, but we expand if needed for context
+    int effectivePadding = std::max(padding, minPadding);
+    std::cout << "[FillModule] Padding logic: User=" << padding << ", MinContext=" << minPadding << " -> Effective=" << effectivePadding << "\n";
+    
+    bbox.x = std::max(0, bbox.x - effectivePadding);
+    bbox.y = std::max(0, bbox.y - effectivePadding);
+    bbox.width = std::min(image.cols - bbox.x, bbox.width + 2 * effectivePadding);
+    bbox.height = std::min(image.rows - bbox.y, bbox.height + 2 * effectivePadding);
     
     // Ensure ROI is valid
     if (bbox.width <= 0 || bbox.height <= 0) return image.clone();
@@ -69,6 +74,8 @@ cv::Mat FillModule::fill(const cv::Mat& image, const cv::Mat& mask, int padding)
     int w = cropImg.cols;
     int h = cropImg.rows;
     
+    std::cout << "[FillModule] Original ROI Size: " << w << "x" << h << "\n";
+
     // Cap max dimension to avoid OOM (e.g. 2048)
     int maxDim = 2048;
     if (w > maxDim || h > maxDim) {
@@ -84,6 +91,7 @@ cv::Mat FillModule::fill(const cv::Mat& image, const cv::Mat& mask, int padding)
     if (h == 0) h = 8;
     
     cv::Size targetSize(w, h);
+    std::cout << "[FillModule] Model Input Size: " << w << "x" << h << "\n";
 
     cv::Mat inputImg, inputMask;
     cv::resize(cropImg, inputImg, targetSize, 0, 0, cv::INTER_AREA);
@@ -118,7 +126,8 @@ cv::Mat FillModule::fill(const cv::Mat& image, const cv::Mat& mask, int padding)
     // 5. Paste Back
     // Resize result to original ROI size
     cv::Mat finalCrop;
-    cv::resize(inpaintedCrop, finalCrop, bbox.size(), 0, 0, cv::INTER_LINEAR);
+    // Use LANCZOS4 for sharper upscaling/resizing
+    cv::resize(inpaintedCrop, finalCrop, bbox.size(), 0, 0, cv::INTER_LANCZOS4);
 
     // Blend
     // Simple replacement of masked area

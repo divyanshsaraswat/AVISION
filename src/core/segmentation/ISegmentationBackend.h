@@ -16,6 +16,26 @@ public:
      * @return cv::Mat Binary mask (CV_8UC1) where 255 is foreground, 0 is background.
      */
     virtual cv::Mat segment(const cv::Mat& image, const cv::Rect& roi, const cv::Point& seed = cv::Point(-1, -1)) = 0;
+
+    /**
+     * @brief Perform segmentation with multiple prompts (points and/or box).
+     * 
+     * @param image Input image.
+     * @param points Vector of points (prompts).
+     * @param labels Vector of labels for points (1=foreground, 0=background).
+     * @param box Optional bounding box prompt.
+     * @return cv::Mat Binary mask.
+     */
+    virtual cv::Mat segment(const cv::Mat& image, const std::vector<cv::Point>& points, const std::vector<int>& labels, const cv::Rect& box = cv::Rect()) {
+        // Default implementation calls single-point version if applicable
+        if (points.size() == 1 && box.empty()) {
+             return segment(image, cv::Rect(), points[0]);
+        }
+        if (!box.empty() && points.empty()) {
+             return segment(image, box);
+        }
+        return cv::Mat();
+    }
     
     /**
      * @brief Get the name of the backend.

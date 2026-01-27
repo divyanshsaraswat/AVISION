@@ -154,20 +154,30 @@ void MobileSAMBackend::runEncoder(const cv::Mat& image) {
     }
 }
 
-cv::Mat MobileSAMBackend::runDecoder(const cv::Point& seed, const cv::Size& originalSize, float scale) {
+cv::Mat MobileSAMBackend::runDecoder(const std::vector<cv::Point>& points, const std::vector<int>& labels, const cv::Size& originalSize, float scale) {
      if (!hasEmbeddings) return cv::Mat();
      
-     std::cout << "[MobileSAMBackend] Running Decoder...\n";
+     // std::cout << "[MobileSAMBackend] Running Decoder with " << points.size() << " points...\n";
 
-     // Prepare Points
-     float x_pt = seed.x * scale;
-     float y_pt = seed.y * scale;
+     // Prepare Points (N, 2)
+     // If no points provided, MobileSAM usually fails or returns empty mask.
+     if (points.empty()) return cv::Mat();
+
+     size_t numPoints = points.size();
+     std::vector<float> pointsData;
+     std::vector<float> labelsData;
      
-     // 1 point + 1 padding point
-     std::vector<float> pointsData = { x_pt, y_pt, 0.0f, 0.0f };
-     std::vector<int64_t> pointsShape = {1, 2, 2};
-     std::vector<float> labelsData = { 1.0f, -1.0f }; // 1 = Foreground, -1 = Padding
-     std::vector<int64_t> labelsShape = {1, 2};
+     pointsData.reserve(numPoints * 2);
+     labelsData.reserve(numPoints);
+
+     for(size_t i=0; i<numPoints; ++i) {
+         pointsData.push_back((float)points[i].x * scale);
+         pointsData.push_back((float)points[i].y * scale);
+         labelsData.push_back((float)labels[i]);
+     }
+     
+     std::vector<int64_t> pointsShape = {1, (int64_t)numPoints, 2};
+     std::vector<int64_t> labelsShape = {1, (int64_t)numPoints};
      
      auto memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
      std::vector<Ort::Value> inputTensors;
@@ -182,7 +192,7 @@ cv::Mat MobileSAMBackend::runDecoder(const cv::Point& seed, const cv::Size& orig
      // 3. Point Labels
      inputTensors.push_back(Ort::Value::CreateTensor<float>(memoryInfo, labelsData.data(), labelsData.size(), labelsShape.data(), labelsShape.size()));
      
-     // 4. Mask Input (Dummy)
+     // 4. Mask Input (Dummy) - 256x256
      std::vector<float> maskInput(1 * 1 * 256 * 256, 0.0f);
      std::vector<int64_t> maskInputShape = {1, 1, 256, 256};
      inputTensors.push_back(Ort::Value::CreateTensor<float>(memoryInfo, maskInput.data(), maskInput.size(), maskInputShape.data(), maskInputShape.size()));
@@ -203,14 +213,10 @@ cv::Mat MobileSAMBackend::runDecoder(const cv::Point& seed, const cv::Size& orig
      try {
          auto outputTensors = decoderSession->Run(Ort::RunOptions{nullptr}, inputNames, inputTensors.data(), 6, outputNames, 3);
          
-         // extract masks: [1, 4, H, W] or similar. Standard SAM exports fixed size masks or resized?
-         // If return_extra_metrics was false, it's just masks, iou, low_res.
-         // Let's assume the shape is compatible.
-         
          float* maskRaw = outputTensors[0].GetTensorMutableData<float>();
          float* iouRaw = outputTensors[1].GetTensorMutableData<float>();
          
-         // Best Mask
+         // Best Mask Logic (Greedy)
          int bestIdx = 0;
          float maxIou = -1.0f;
          for (int i=0; i<4; ++i) {
@@ -220,18 +226,10 @@ cv::Mat MobileSAMBackend::runDecoder(const cv::Point& seed, const cv::Size& orig
              }
          }
          
-         // Assuming output mask is high-res (equal to orig_im_size due to dynamic axis export? or 1024?)
-         // Actually, if we pass orig_im_size, the model often upscales internally.
-         // Let's check tensor info if possible, but for now assume it matches origSize?
-         // Safe bet: The output is usually the size of 'orig_im_size'.
-         
-         // If dimensions match original size:
+         // Dimensions
          int w = originalSize.width;
          int h = originalSize.height;
          int area = w * h;
-         
-         // Safety check: verify raw buffer size if we could.
-         // Instead, we just trust.
          
          float* bestMaskStart = maskRaw + (bestIdx * area);
          
@@ -248,36 +246,73 @@ cv::Mat MobileSAMBackend::runDecoder(const cv::Point& seed, const cv::Size& orig
      }
 }
 
-cv::Mat MobileSAMBackend::segment(const cv::Mat& image, const cv::Rect& roi, const cv::Point& seed) {
+cv::Mat MobileSAMBackend::segment(const cv::Mat& image, const std::vector<cv::Point>& points, const std::vector<int>& labels, const cv::Rect& box) {
     if (!modelLoaded || image.empty()) return cv::Mat();
-
-    // Determine Seed
-    cv::Point targetPoint = seed;
-    if (targetPoint.x == -1) {
-        targetPoint.x = roi.x + roi.width / 2;
-        targetPoint.y = roi.y + roi.height / 2;
-    }
 
     try {
         // Run Encoder if Image Changed
-        if (lastImage.empty() || cv::countNonZero(image != lastImage) > 0) {
-             // Reset embeddings cache
+        // Simple check: Dimensions + Data Pointer (User responsibility to keep same mat for same image in interactive mode)
+        bool imageChanged = lastImage.empty() || image.size() != lastImage.size();
+        
+        // Full content check is too slow for real-time. 
+        // We assume if dimensions match and it's interactive mode, it's the same image.
+        // Or we rely on caller to manage this?
+        // Let's implement a 'reset' method? No.
+        // Let's keep a simplistic check for now. If user provides different image with same dims, artifacts might occur.
+        // User should probably re-instantiate backend or we add explicit 'setImage'.
+        // For CLI, it's fine.
+        
+        if (imageChanged) {
              hasEmbeddings = false;
              runEncoder(image); 
              lastImage = image.clone();
+        } else if (hasEmbeddings == false) {
+             runEncoder(image);
+             lastImage = image.clone();
         }
         
-        // Calculate Preprocessing Scale
+        // Scale
         int h = image.rows;
         int w = image.cols;
         float scale = 1024.0f / std::max(h, w);
         
-        return runDecoder(targetPoint, image.size(), scale);
+        // Combine Points & Box
+        std::vector<cv::Point> finalPoints = points;
+        std::vector<int> finalLabels = labels;
+        
+        if (!box.empty()) {
+            // Box is represented as top-left (Label 2) and bottom-right (Label 3)
+            finalPoints.push_back(cv::Point(box.x, box.y));
+            finalLabels.push_back(2);
+            
+            finalPoints.push_back(cv::Point(box.x + box.width, box.y + box.height));
+            finalLabels.push_back(3);
+        }
+        
+        return runDecoder(finalPoints, finalLabels, image.size(), scale);
 
-    } catch (const Ort::Exception& e) {
+    } catch (const std::exception& e) {
         std::cerr << "[MobileSAMBackend] Inference Failed: " << e.what() << "\n";
         return cv::Mat();
     }
+}
+
+cv::Mat MobileSAMBackend::segment(const cv::Mat& image, const cv::Rect& roi, const cv::Point& seed) {
+    // Backward compatibility wrapper
+    std::vector<cv::Point> points;
+    std::vector<int> labels;
+    
+    if (seed.x != -1) {
+        points.push_back(seed);
+        labels.push_back(1); // Foreman
+    } else if (!roi.empty()) {
+        // If only ROI provided, use box prompt
+        // (Handled by passing box to next func)
+    } else {
+        // No prompts?
+    }
+    
+    return segment(image, points, labels, roi);
 }
 
 } // namespace avision

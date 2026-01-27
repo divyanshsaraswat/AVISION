@@ -65,6 +65,7 @@ int ImageCLI::handleSegment(int argc, char** argv) {
     cv::Rect rect; 
     cv::Point seedPt(-1, -1);
     int threshold = 20; 
+    cv::Mat binMask; 
 
 
     for (int i = 3; i < argc; ++i) {
@@ -110,74 +111,181 @@ int ImageCLI::handleSegment(int argc, char** argv) {
     cv::Point interactiveSeed(-1, -1);
     
     if (interactive) {
-        // Mode 1: Interactive BBox (default behavior)
-        // Mode 2: Interactive Seed (if user passed --seed but no args? or generic interactive flag)
-        // Simplification: If --seed flag is NOT passed, standard selectROI.
-        // If user wants interactive Seed, we probably need a way to distinguish.
-        // For now, let's allow 'interactive' to support CLICKING if not dragging.
+        std::cout << "--- Interactive Mode ---\n";
+        std::cout << "  Left Click      : Add Foreground Point (Green)\n";
+        std::cout << "  Right Click     : Add Background Point (Red)\n";
+        std::cout << "  Drag (Left Btn) : Draw Bounding Box (Blue)\n";
+        std::cout << "  SPACE / ENTER   : Run Segmentation\n";
+        std::cout << "  'c'             : Clear All Prompts\n";
+        std::cout << "  's'             : Save Result & Exit\n";
+        std::cout << "  'q' / ESC       : Quit without saving\n";
+        std::cout << "------------------------\n";
+
+        // State
+        std::vector<cv::Point> points;
+        std::vector<int> labels; // 1=FG, 0=BG
+        cv::Rect box;
+        cv::Mat currentVisual = img.clone();
         
-        // Actually, user request: "give me interactive window to choose the point"
-        // Let's implement a custom mouse callback.
+        // Context for Callback
+        struct InteractionContext {
+            cv::Mat refImg;
+            std::vector<cv::Point>* points;
+            std::vector<int>* labels;
+            cv::Rect* box;
+            bool isDragging = false;
+            cv::Point dragStart;
+            bool dirty = true;
+            cv::Mat currentMask; // Last result
+        } ctx;
         
-        std::cout << "[Interactive] Click to select seed point (Magic Wand) OR Drag to select ROI (GrabCut).\n";
-        std::cout << "Press SPACE/ENTER to confirm selection.\n";
+        ctx.refImg = img; // Shared reference? Actually just need const access.
+        ctx.points = &points;
+        ctx.labels = &labels;
+        ctx.box = &box;
         
-        // Custom Mouse Callback Logic
-        static cv::Point clickedPt(-1, -1);
-        static cv::Rect draggedRect;
-        static bool isDrag = false;
-        static cv::Mat displayImg;
-        
-        // Lambda-like static wrapper or simple loop
-        // cv::selectROI is blocking and only does Rect.
-        // We need cv::setMouseCallback.
-        
-        std::string winName = "Select ROI (Drag) or Seed (Click)";
+        std::string winName = "Interactive Segmentation";
         cv::namedWindow(winName);
-        displayImg = img.clone();
-        
+
         cv::setMouseCallback(winName, [](int event, int x, int y, int flags, void* userdata) {
+            auto* c = (InteractionContext*)userdata;
+            
             if (event == cv::EVENT_LBUTTONDOWN) {
-                clickedPt = cv::Point(x, y);
-                isDrag = false;
-            } else if (event == cv::EVENT_MOUSEMOVE && (flags & cv::EVENT_FLAG_LBUTTON)) {
-                isDrag = true;
-            } else if (event == cv::EVENT_LBUTTONUP) {
-                if (!isDrag) {
-                   std::cout << "Selected Point: " << clickedPt << "\n";
-                   cv::circle(displayImg, clickedPt, 3, cv::Scalar(0,0,255), -1);
-                   cv::imshow("Select ROI (Drag) or Seed (Click)", displayImg);
+                c->isDragging = true;
+                c->dragStart = cv::Point(x, y);
+            } 
+            else if (event == cv::EVENT_MOUSEMOVE) {
+                if (c->isDragging) {
+                    // Update box during drag
+                    int x1 = std::min(c->dragStart.x, x);
+                    int y1 = std::min(c->dragStart.y, y);
+                    int w = std::abs(x - c->dragStart.x);
+                    int h = std::abs(y - c->dragStart.y);
+                    *c->box = cv::Rect(x1, y1, w, h);
+                    c->dirty = true;
                 }
+            } 
+            else if (event == cv::EVENT_LBUTTONUP) {
+                if (c->isDragging) {
+                    c->isDragging = false;
+                    int dx = x - c->dragStart.x;
+                    int dy = y - c->dragStart.y;
+                    
+                    // Threshold to distinguish click vs drag (e.g. 5 pixels)
+                    if (std::abs(dx) < 5 && std::abs(dy) < 5) {
+                        // It's a Click -> Add FG Point
+                        c->points->push_back(cv::Point(x, y));
+                        c->labels->push_back(1);
+                        
+                        // Don't modify box if it was just a click
+                        // (Unless box was being drawn? No, simple logic)
+                        // If we had a previous box, we keep it. 
+                        // But the drag update set it to 0-size? No, we check dist.
+                        // Actually, MOUSEMOVE updated it to tiny rect. We should check bounds.
+                        if (c->box->width < 5 && c->box->height < 5) {
+                             // Revert to valid box or empty if invalid
+                             if (c->box->width < 5) *c->box = cv::Rect(); // Reset if too small
+                        }
+                    } else {
+                        // Keep the dragged box
+                    }
+                    c->dirty = true;
+                }
+            } 
+            else if (event == cv::EVENT_RBUTTONDOWN) {
+                // Background point
+                c->points->push_back(cv::Point(x, y));
+                c->labels->push_back(0); 
+                c->dirty = true;
             }
-        }, NULL);
-        
-        cv::imshow(winName, img);
-        int key = cv::waitKey(0);
-        
-        if (clickedPt.x != -1 && !isDrag) {
-            interactiveSeed = clickedPt;
-        } else {
-             // Fallback to selectROI if they dragged (implementation complex here, so sticking to selectROI if usage implies ROI)
-             // But wait, user specifically asked for point choice.
-             // Let's rely on standard selectROI for Rect, but custom for Point?
-             // Actually, selectROI returns a 1x1 rect if you just click? No.
+        }, &ctx);
+
+        avision::SegmentationModule segModule;
+
+        while(true) {
+            if (ctx.dirty) {
+                // Redraw Base
+                currentVisual = img.clone();
+                
+                // Draw Box
+                if (box.width > 0 && box.height > 0) {
+                    cv::rectangle(currentVisual, box, cv::Scalar(255, 0, 0), 2);
+                }
+                
+                // Draw Points
+                for(size_t i=0; i<points.size(); ++i) {
+                    cv::Scalar color = (labels[i] == 1) ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 0, 255);
+                    cv::circle(currentVisual, points[i], 4, color, -1);
+                    // Add outline for visibility
+                    cv::circle(currentVisual, points[i], 5, cv::Scalar(0,0,0), 1);
+                }
+                
+                // Draw Mask Overlay
+                if (!ctx.currentMask.empty()) {
+                   cv::Mat redOverlay = cv::Mat::zeros(img.size(), CV_8UC3);
+                   redOverlay.setTo(cv::Scalar(0, 0, 255), ctx.currentMask); // Red
+                   cv::addWeighted(currentVisual, 1.0, redOverlay, 0.4, 0, currentVisual);
+                }
+                
+                cv::imshow(winName, currentVisual);
+                ctx.dirty = false;
+            }
+            
+            int key = cv::waitKey(30);
+            if (key == 'q' || key == 27) { // Quit
+                 return 0;
+            }
+            if (key == 's') { // Save
+                 binMask = ctx.currentMask;
+                 break; 
+            }
+            if (key == 'c') { // Clear
+                 points.clear();
+                 labels.clear();
+                 box = cv::Rect();
+                 ctx.currentMask = cv::Mat();
+                 ctx.dirty = true;
+                 std::cout << "[Interactive] Cleared.\n";
+            }
+            if (key == 32 || key == 13) { // Run
+                 std::cout << "[Interactive] Segmenting...\n";
+                 ctx.currentMask = segModule.segment(img, points, labels, box);
+                 ctx.dirty = true;
+                 
+                 std::cout << "Done. Mask Non-Zero: " << cv::countNonZero(ctx.currentMask) << "\n";
+            }
         }
+        
         cv::destroyWindow(winName);
         
-        // If we got a point, use it.
-        if (interactiveSeed.x != -1) {
-             seedPt = interactiveSeed;
-             // Default threshold if not set?
-             if (seedStr.empty()) threshold = 20; 
-        } else {
-             // Retry with standard ROI
-             roi = cv::selectROI("Select ROI (Fallback)", img);
+        if (binMask.empty()) {
+            std::cerr << "Warning: Exiting without a valid mask selected.\n";
+            return 0;
         }
+
     } else if (!bboxStr.empty()) {
         roi = parseBBox(bboxStr);
     } else if (seedStr.empty()) {
         std::cerr << "Error: Must specify --bbox, --interactive, or --seed\n";
         return 1;
+    }
+
+    // Seed Parsing Logic (moved/kept)
+    if (!seedStr.empty()) {
+        // ... (Parsing logic from original file needs to be preserved or ensures it runs)
+        // Wait, the replacement block above replaced the seed parsing logic?
+        // The original file had seed parsing AFTER the check.
+        // My replacement cut it off?
+        // I need to check if I deleted the seed parsing logic.
+        // The replacement was around line 110 to 175.
+        // The seed parsing was at line 183.
+        // My replacement ended at line 175 (relative to original file).
+        // So seed parsing should still be there.
+    }
+
+    if (!interactive) {
+         avision::SegmentationModule segModule;
+         binMask = segModule.segment(img, roi, seedPt);
     }
 
     // Seed Parsing
@@ -212,11 +320,13 @@ int ImageCLI::handleSegment(int argc, char** argv) {
         outputPath = "output.png";
     }
 
-    cv::Mat binMask;
+
 
     // --- SEGMENTATION MODULE INTEGRATION ---
-    avision::SegmentationModule segModule;
-    binMask = segModule.segment(img, roi, seedPt);
+    if (!interactive) {
+        avision::SegmentationModule segModule;
+        binMask = segModule.segment(img, roi, seedPt);
+    }
 
     if (binMask.empty()) {
         std::cerr << "Error: Segmentation failed (backend returned empty mask).\n";

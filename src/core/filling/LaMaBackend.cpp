@@ -27,7 +27,8 @@ void LaMaBackend::loadModel() {
     if (!modelPath.empty()) {
         try {
             std::cout << "[LaMaBackend] Loading model: " << modelPath << "\n";
-            env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "BigLaMa");
+            // Suppress benign schema warnings
+            env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_ERROR, "BigLaMa");
             options = std::make_unique<Ort::SessionOptions>();
             options->SetIntraOpNumThreads(1);
             options->SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
@@ -54,12 +55,13 @@ cv::Mat LaMaBackend::inpaint(const cv::Mat& image, const cv::Mat& mask) {
     if (!modelLoaded) return cv::Mat();
 
     // 1. Prepare Inputs
-    // LaMa expects [1, 3, H, W] image (normalized roughly to 0-1) and [1, 1, H, W] mask (0-1)
-    // But check the export script normalization. Usually LaMa preprocessing is minimal or standard 0.5 mean.
-    // Let's assume standard float32 [0,1].
+    // LaMa expects [1, 3, H, W] RGB image (normalized roughly to 0-1) and [1, 1, H, W] mask (0-1)
     
+    cv::Mat rgbImg;
+    cv::cvtColor(image, rgbImg, cv::COLOR_BGR2RGB);
+
     cv::Mat floatImg;
-    image.convertTo(floatImg, CV_32FC3, 1.0/255.0);
+    rgbImg.convertTo(floatImg, CV_32FC3, 1.0/255.0);
     
     cv::Mat floatMask;
     mask.convertTo(floatMask, CV_32FC1, 1.0/255.0);
@@ -96,7 +98,7 @@ cv::Mat LaMaBackend::inpaint(const cv::Mat& image, const cv::Mat& mask) {
         
         float* outData = outputTensors[0].GetTensorMutableData<float>();
         
-        // Output is [1, 3, H, W]
+        // Output is [1, 3, H, W] in RGB
         // CHW to HWC
         std::vector<cv::Mat> outChannels(3);
         int planeSize = h * w;
@@ -107,9 +109,15 @@ cv::Mat LaMaBackend::inpaint(const cv::Mat& image, const cv::Mat& mask) {
         cv::Mat merged;
         cv::merge(outChannels, merged);
         
-        // Convert back to 8UC3
-        merged.convertTo(merged, CV_8UC3, 255.0);
-        return merged;
+        // Convert back to 8UC3 (still RGB)
+        cv::Mat rgbOut;
+        merged.convertTo(rgbOut, CV_8UC3, 255.0);
+        
+        // RGB -> BGR for OpenCV
+        cv::Mat bgrOut;
+        cv::cvtColor(rgbOut, bgrOut, cv::COLOR_RGB2BGR);
+        
+        return bgrOut;
 
     } catch (const Ort::Exception& e) {
         std::cerr << "[LaMaBackend] Inference Failed: " << e.what() << "\n";

@@ -16,6 +16,7 @@ public:
     MobileSAMBackend();
     
     cv::Mat segment(const cv::Mat& image, const cv::Rect& roi, const cv::Point& seed) override;
+    cv::Mat segment(const cv::Mat& image, const std::vector<cv::Point>& points, const std::vector<int>& labels, const cv::Rect& box) override;
     
     std::string name() const override { return "MobileSAM (ONNX Runtime)"; }
     bool isAvailable() const;
@@ -45,7 +46,7 @@ private:
     // Internal Helpers
     void loadModels();
     void runEncoder(const cv::Mat& inputImg);
-    cv::Mat runDecoder(const cv::Point& seed, const cv::Size& originalSize, float scale);
+    cv::Mat runDecoder(const std::vector<cv::Point>& points, const std::vector<int>& labels, const cv::Size& originalSize, float scale);
 };
 
 } // namespace avision
