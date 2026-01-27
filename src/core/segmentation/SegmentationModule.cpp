@@ -36,11 +36,11 @@ cv::Mat SegmentationModule::segment(const cv::Mat& image, const cv::Rect& roi, c
     return result;
 }
 
-cv::Mat SegmentationModule::segment(const cv::Mat& image, const std::vector<cv::Point>& points, const std::vector<int>& labels, const cv::Rect& box) {
+cv::Mat SegmentationModule::segment(const cv::Mat& image, const std::vector<cv::Point>& points, const std::vector<int>& labels, const std::vector<cv::Rect>& boxes) {
     cv::Mat result;
 
     // 1. Try Primary (MobileSAM)
-    result = primaryBackend->segment(image, points, labels, box);
+    result = primaryBackend->segment(image, points, labels, boxes);
     
     if (!result.empty()) {
         std::cout << "[SegmentationModule] Used Primary Backend: " << primaryBackend->name() << "\n";
@@ -49,7 +49,7 @@ cv::Mat SegmentationModule::segment(const cv::Mat& image, const std::vector<cv::
 
     // 2. Fallback (Classical)
     std::cout << "[SegmentationModule] Primary backend unavailable or failed. Switching to Fallback: " << fallbackBackend->name() << "\n";
-    result = fallbackBackend->segment(image, points, labels, box);
+    result = fallbackBackend->segment(image, points, labels, boxes);
 
     return result;
 }

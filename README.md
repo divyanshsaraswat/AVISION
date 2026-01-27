@@ -92,7 +92,7 @@ build\Release\AVisionCLI.exe image segment --input raw.jpg --interactive --outpu
 **Controls:**
 *   **Left Click**: Add **Foreground** Point (Green).
 *   **Right Click**: Add **Background** Point (Red).
-*   **Left Drag**: Draw **Bounding Box** (Blue).
+*   **Left Drag**: Draw **Bounding Box** (Blue). You can draw multiple boxes.
 *   **Space / Enter**: Run Segmentation.
 *   **'c'**: Clear all prompts.
 *   **'s'**: Save mask & exit.

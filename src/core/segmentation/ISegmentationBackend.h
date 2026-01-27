@@ -26,13 +26,13 @@ public:
      * @param box Optional bounding box prompt.
      * @return cv::Mat Binary mask.
      */
-    virtual cv::Mat segment(const cv::Mat& image, const std::vector<cv::Point>& points, const std::vector<int>& labels, const cv::Rect& box = cv::Rect()) {
+    virtual cv::Mat segment(const cv::Mat& image, const std::vector<cv::Point>& points, const std::vector<int>& labels, const std::vector<cv::Rect>& boxes = {}) {
         // Default implementation calls single-point version if applicable
-        if (points.size() == 1 && box.empty()) {
+        if (points.size() == 1 && boxes.empty()) {
              return segment(image, cv::Rect(), points[0]);
         }
-        if (!box.empty() && points.empty()) {
-             return segment(image, box);
+        if (!boxes.empty() && points.empty() && boxes.size() == 1) {
+             return segment(image, boxes[0]);
         }
         return cv::Mat();
     }

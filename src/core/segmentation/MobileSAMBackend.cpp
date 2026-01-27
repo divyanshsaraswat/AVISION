@@ -246,21 +246,12 @@ cv::Mat MobileSAMBackend::runDecoder(const std::vector<cv::Point>& points, const
      }
 }
 
-cv::Mat MobileSAMBackend::segment(const cv::Mat& image, const std::vector<cv::Point>& points, const std::vector<int>& labels, const cv::Rect& box) {
+cv::Mat MobileSAMBackend::segment(const cv::Mat& image, const std::vector<cv::Point>& points, const std::vector<int>& labels, const std::vector<cv::Rect>& boxes) {
     if (!modelLoaded || image.empty()) return cv::Mat();
 
     try {
         // Run Encoder if Image Changed
-        // Simple check: Dimensions + Data Pointer (User responsibility to keep same mat for same image in interactive mode)
         bool imageChanged = lastImage.empty() || image.size() != lastImage.size();
-        
-        // Full content check is too slow for real-time. 
-        // We assume if dimensions match and it's interactive mode, it's the same image.
-        // Or we rely on caller to manage this?
-        // Let's implement a 'reset' method? No.
-        // Let's keep a simplistic check for now. If user provides different image with same dims, artifacts might occur.
-        // User should probably re-instantiate backend or we add explicit 'setImage'.
-        // For CLI, it's fine.
         
         if (imageChanged) {
              hasEmbeddings = false;
@@ -276,11 +267,12 @@ cv::Mat MobileSAMBackend::segment(const cv::Mat& image, const std::vector<cv::Po
         int w = image.cols;
         float scale = 1024.0f / std::max(h, w);
         
-        // Combine Points & Box
+        // Combine Points & Boxes
         std::vector<cv::Point> finalPoints = points;
         std::vector<int> finalLabels = labels;
         
-        if (!box.empty()) {
+        for (const auto& box : boxes) {
+            if (box.empty()) continue;
             // Box is represented as top-left (Label 2) and bottom-right (Label 3)
             finalPoints.push_back(cv::Point(box.x, box.y));
             finalLabels.push_back(2);
@@ -312,7 +304,12 @@ cv::Mat MobileSAMBackend::segment(const cv::Mat& image, const cv::Rect& roi, con
         // No prompts?
     }
     
-    return segment(image, points, labels, roi);
+    std::vector<cv::Rect> boxes;
+    if (!roi.empty()) {
+        boxes.push_back(roi);
+    }
+
+    return segment(image, points, labels, boxes);
 }
 
 } // namespace avision

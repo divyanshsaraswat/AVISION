@@ -124,7 +124,7 @@ int ImageCLI::handleSegment(int argc, char** argv) {
         // State
         std::vector<cv::Point> points;
         std::vector<int> labels; // 1=FG, 0=BG
-        cv::Rect box;
+        std::vector<cv::Rect> boxes;
         cv::Mat currentVisual = img.clone();
         
         // Context for Callback
@@ -132,17 +132,17 @@ int ImageCLI::handleSegment(int argc, char** argv) {
             cv::Mat refImg;
             std::vector<cv::Point>* points;
             std::vector<int>* labels;
-            cv::Rect* box;
+            std::vector<cv::Rect>* boxes;
             bool isDragging = false;
             cv::Point dragStart;
             bool dirty = true;
             cv::Mat currentMask; // Last result
         } ctx;
         
-        ctx.refImg = img; // Shared reference? Actually just need const access.
+        ctx.refImg = img;
         ctx.points = &points;
         ctx.labels = &labels;
-        ctx.box = &box;
+        ctx.boxes = &boxes;
         
         std::string winName = "Interactive Segmentation";
         cv::namedWindow(winName);
@@ -153,15 +153,17 @@ int ImageCLI::handleSegment(int argc, char** argv) {
             if (event == cv::EVENT_LBUTTONDOWN) {
                 c->isDragging = true;
                 c->dragStart = cv::Point(x, y);
+                // Start a new potential box
+                c->boxes->push_back(cv::Rect(x, y, 0, 0));
             } 
             else if (event == cv::EVENT_MOUSEMOVE) {
-                if (c->isDragging) {
-                    // Update box during drag
+                if (c->isDragging && !c->boxes->empty()) {
+                    // Update current box
                     int x1 = std::min(c->dragStart.x, x);
                     int y1 = std::min(c->dragStart.y, y);
                     int w = std::abs(x - c->dragStart.x);
                     int h = std::abs(y - c->dragStart.y);
-                    *c->box = cv::Rect(x1, y1, w, h);
+                    c->boxes->back() = cv::Rect(x1, y1, w, h);
                     c->dirty = true;
                 }
             } 
@@ -174,20 +176,19 @@ int ImageCLI::handleSegment(int argc, char** argv) {
                     // Threshold to distinguish click vs drag (e.g. 5 pixels)
                     if (std::abs(dx) < 5 && std::abs(dy) < 5) {
                         // It's a Click -> Add FG Point
+                        // Remove the tiny box we started
+                        if (!c->boxes->empty()) c->boxes->pop_back();
+
                         c->points->push_back(cv::Point(x, y));
                         c->labels->push_back(1);
-                        
-                        // Don't modify box if it was just a click
-                        // (Unless box was being drawn? No, simple logic)
-                        // If we had a previous box, we keep it. 
-                        // But the drag update set it to 0-size? No, we check dist.
-                        // Actually, MOUSEMOVE updated it to tiny rect. We should check bounds.
-                        if (c->box->width < 5 && c->box->height < 5) {
-                             // Revert to valid box or empty if invalid
-                             if (c->box->width < 5) *c->box = cv::Rect(); // Reset if too small
-                        }
                     } else {
-                        // Keep the dragged box
+                        // Keep the dragged box if valid
+                        if (!c->boxes->empty()) {
+                             cv::Rect& r = c->boxes->back();
+                             if (r.width < 5 || r.height < 5) {
+                                 c->boxes->pop_back(); // Too small
+                             }
+                        }
                     }
                     c->dirty = true;
                 }
@@ -207,9 +208,9 @@ int ImageCLI::handleSegment(int argc, char** argv) {
                 // Redraw Base
                 currentVisual = img.clone();
                 
-                // Draw Box
-                if (box.width > 0 && box.height > 0) {
-                    cv::rectangle(currentVisual, box, cv::Scalar(255, 0, 0), 2);
+                // Draw Boxes
+                for (const auto& b : boxes) {
+                     cv::rectangle(currentVisual, b, cv::Scalar(255, 0, 0), 2);
                 }
                 
                 // Draw Points
@@ -242,14 +243,14 @@ int ImageCLI::handleSegment(int argc, char** argv) {
             if (key == 'c') { // Clear
                  points.clear();
                  labels.clear();
-                 box = cv::Rect();
+                 boxes.clear();
                  ctx.currentMask = cv::Mat();
                  ctx.dirty = true;
                  std::cout << "[Interactive] Cleared.\n";
             }
             if (key == 32 || key == 13) { // Run
                  std::cout << "[Interactive] Segmenting...\n";
-                 ctx.currentMask = segModule.segment(img, points, labels, box);
+                 ctx.currentMask = segModule.segment(img, points, labels, boxes);
                  ctx.dirty = true;
                  
                  std::cout << "Done. Mask Non-Zero: " << cv::countNonZero(ctx.currentMask) << "\n";

@@ -6,6 +6,7 @@ namespace avision {
 class ClassicalBackend : public ISegmentationBackend {
 public:
     cv::Mat segment(const cv::Mat& image, const cv::Rect& roi, const cv::Point& seed = cv::Point(-1, -1)) override;
+    cv::Mat segment(const cv::Mat& image, const std::vector<cv::Point>& points, const std::vector<int>& labels, const std::vector<cv::Rect>& boxes) override;
     std::string name() const override { return "Classical (GrabCut)"; }
 };
 
