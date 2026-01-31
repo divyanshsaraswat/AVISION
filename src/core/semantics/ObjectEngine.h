@@ -63,4 +63,5 @@ private:
     bool processEveryFrame = true;
     int skipInterval = 5;
     int internalFrameCount = 0;
+    std::vector<DetectedObject> cachedDetections;
 };

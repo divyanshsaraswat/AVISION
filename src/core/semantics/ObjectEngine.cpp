@@ -82,21 +82,33 @@ void ObjectEngine::process(Context& ctx) {
     internalFrameCount++;
     
     if (!processEveryFrame) {
-        if (internalFrameCount % skipInterval != 0) return;
+        if (internalFrameCount % skipInterval != 0) {
+            // Use Cache
+            ctx.detections = cachedDetections;
+            
+            // FIX: Must still report confidence for consistency
+             float avgConf = 0.0f;
+             if (!ctx.detections.empty()) {
+                 for (const auto& d : ctx.detections) avgConf += d.confidence;
+                 avgConf /= ctx.detections.size();
+             } else {
+                 avgConf = 0.5f; 
+             }
+             ctx.moduleConfidence["ObjectModule"] = avgConf;
+            return;
+        }
     }
 
     double t_start = (double)cv::getTickCount();
     
+    // Run Detection
     ctx.detections = detect(ctx.rawFrame);
+    
+    // Update Cache
+    cachedDetections = ctx.detections;
     
     double t_end = (double)cv::getTickCount();
     double time_ms = ((t_end - t_start) / cv::getTickFrequency()) * 1000.0;
-    
-    if (!processEveryFrame) {
-         // Verbose logging disabled to prevent console I/O blocking
-         // std::string log = "[ObjectModule] " + std::to_string(time_ms).substr(0,4) + " ms, " + std::to_string(ctx.detections.size()) + " objs";
-         // ctx.moduleLogs.push_back(log);
-    }
     
     // Confidence Report: Average confidence of detections, or 1.0 if ran successfully
     float avgConf = 0.0f;
