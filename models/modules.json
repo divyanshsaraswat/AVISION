@@ -1,4 +1,97 @@
 {
+    "modules": [
+        {
+            "enabled": true,
+            "name": "GeometryModule",
+            "params": {
+                "interval": "30",
+                "safeZoneThreshold": "0.7"
+            }
+        },
+        {
+            "enabled": true,
+            "name": "ObjectModule",
+            "params": {
+                "configPath": "build/Release/models/MobileNetSSD_deploy.prototxt",
+                "eachFrame": "false",
+                "interval": "5",
+                "modelPath": "build/Release/models/MobileNetSSD_deploy.caffemodel",
+                "threshold": "0.1"
+            }
+        },
+        {
+            "enabled": true,
+            "name": "DepthModule",
+            "params": {
+                "eachFrame": "false",
+                "interval": "30",
+                "modelPath": "build/Release/models/midas-v2_1-small-192x256.onnx"
+            }
+        },
+        {
+            "enabled": true,
+            "name": "TemporalModule",
+            "params": {
+                "decay": "0.85",
+                "windowSize": "2"
+            }
+        },
+        {
+            "enabled": true,
+            "name": "FreeSpaceModule",
+            "params": {
+                "minClearance": "1.0",
+                "sectors": "3"
+            }
+        },
+        {
+            "enabled": true,
+            "name": "EdgeSafetyModule",
+            "params": {
+                "gradientThreshold": "0.25"
+            }
+        },
+        {
+            "enabled": true,
+            "name": "OCRModule",
+            "params": {
+                "detectModel": "build/Release/models/text_detection_db.onnx",
+                "interval": "35",
+                "recogModel": "build/Release/models/text_recognition_crnn.onnx"
+            }
+        },
+        {
+            "enabled": true,
+            "name": "PathGuidanceModule",
+            "params": {
+                "turnThreshold": "0.5"
+            }
+        },
+        {
+            "enabled": true,
+            "name": "SceneUnderstandingModule",
+            "params": {
+                "classesPath": "build/Release/models/scene_classes.txt",
+                "interval": "40",
+                "modelPath": "build/Release/models/resnet18_places365.onnx"
+            }
+        },
+        {
+            "enabled": true,
+            "name": "SegmentationModule",
+            "params": {
+                "decoderPath": "build/Release/models/mobile_sam_decoder.onnx",
+                "encoderPath": "build/Release/models/mobile_sam_encoder.onnx"
+            }
+        },
+        {
+            "enabled": true,
+            "name": "FillModule",
+            "params": {
+                "modelPath": "build/Release/models/big_lama.onnx"
+            }
+        }
+    ],
     "pipeline": {
         "nodes": [
             "GeometryModule",
@@ -9,126 +102,9 @@
             "EdgeSafetyModule",
             "OCRModule",
             "PathGuidanceModule",
-            "SceneUnderstandingModule"
-        ],
-        "edges": [
-            [
-                "GeometryModule",
-                "ObjectModule"
-            ],
-            [
-                "GeometryModule",
-                "PathGuidanceModule"
-            ],
-            [
-                "GeometryModule",
-                "EdgeSafetyModule"
-            ],
-            [
-                "ObjectModule",
-                "TemporalModule"
-            ]
-        ],
-        "gates": [
-            {
-                "if_source": "GeometryModule",
-                "condition": "confidence_gt",
-                "value": 0.85,
-                "then_skip": "ObjectModule"
-            }
+            "SceneUnderstandingModule",
+            "SegmentationModule",
+            "FillModule"
         ]
-    },
-    "modules": [
-        {
-            "name": "GeometryModule",
-            "enabled": true,
-            "params": {
-                "safeZoneThreshold": "0.7",
-                "interval": "30"
-            }
-        },
-        {
-            "name": "ObjectModule",
-            "enabled": true,
-            "params": {
-                "modelPath": "build/Release/models/MobileNetSSD_deploy.caffemodel",
-                "configPath": "build/Release/models/MobileNetSSD_deploy.prototxt",
-                "threshold": "0.1",
-                "eachFrame": "false",
-                "interval": "5"
-            }
-        },
-        {
-            "name": "DepthModule",
-            "enabled": true,
-            "params": {
-                "modelPath": "build/Release/models/midas-v2_1-small-192x256.onnx",
-                "eachFrame": "false",
-                "interval": "30"
-            }
-        },
-        {
-            "name": "TemporalModule",
-            "enabled": true,
-            "params": {
-                "windowSize": "2",
-                "decay": "0.85"
-            }
-        },
-        {
-            "name": "FreeSpaceModule",
-            "enabled": true,
-            "params": {
-                "sectors": "3",
-                "minClearance": "1.0"
-            }
-        },
-        {
-            "name": "EdgeSafetyModule",
-            "enabled": true,
-            "params": {
-                "gradientThreshold": "0.25"
-            }
-        },
-        {
-            "name": "OCRModule",
-            "enabled": true,
-            "params": {
-                "detectModel": "build/Release/models/text_detection_db.onnx",
-                "recogModel": "build/Release/models/text_recognition_crnn.onnx",
-                "interval": "35"
-            }
-        },
-        {
-            "name": "PathGuidanceModule",
-            "enabled": true,
-            "params": {
-                "turnThreshold": "0.5"
-            }
-        },
-        {
-            "name": "SceneUnderstandingModule",
-            "enabled": true,
-            "params": {
-                "modelPath": "build/Release/models/resnet18_places365.onnx",
-                "classesPath": "build/Release/models/scene_classes.txt",
-                "interval": "40"
-            }
-        },
-        {
-            "name": "SegmentationModule",
-            "enabled": true,
-            "params": {
-                "encoderPath": "build/Release/models/mobile_sam_encoder.onnx",
-                "decoderPath": "build/Release/models/mobile_sam_decoder.onnx"
-            }
-        },
-        {
-            "name": "FillModule",
-            "enabled": true,
-            "params": {
-                "modelPath": "build/Release/models/big_lama.onnx"
-            }
-        }
-    ]
+    }
 }

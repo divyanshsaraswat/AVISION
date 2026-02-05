@@ -1,0 +1,144 @@
+[SETUP] Checking and downloading models...
+[Setup] Reading configuration from models/modules.json...
+[Setup] MobileNetSSD_deploy.caffemodel exists.
+[Setup] midas-v2_1-small-192x256.onnx exists.
+[Setup] resnet18_places365.onnx exists.
+[Setup] big_lama.onnx exists.
+[BUILD] Configuring project...
+-- Running vcpkg install
+Detecting compiler hash for triplet x64-windows...
+Compiler found: C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.42.34433/bin/Hostx64/x64/cl.exe
+The following packages are already installed:
+  * abseil:x64-windows@20250814.1
+  * boost-cmake:x64-windows@1.90.0#1
+  * boost-config:x64-windows@1.90.0#1
+  * boost-headers:x64-windows@1.90.0#1
+  * boost-mp11:x64-windows@1.90.0#1
+  * boost-uninstall:x64-windows@1.90.0#1
+  * cpuinfo:x64-windows@2025-09-06
+  * cxxopts:x64-windows@3.3.1#1
+  * date:x64-windows@3.0.4
+  * dlpack:x64-windows@1.2
+  * eigen3:x64-windows@5.0.1
+  * flatbuffers:x64-windows@25.9.23#1
+    ftxui:x64-windows@6.1.9
+  * libjpeg-turbo:x64-windows@3.1.3
+  * liblzma:x64-windows@5.8.2
+  * libpng:x64-windows@1.6.53
+  * libwebp[core,libwebpmux,nearlossless,simd,unicode]:x64-windows@1.6.0#2
+  * ms-gsl:x64-windows@4.2.1
+    nlohmann-json:x64-windows@3.12.0#1
+  * onnx:x64-windows@1.19.0
+    onnxruntime:x64-windows@1.23.2
+    opencv[core,highgui]:x64-windows@4.12.0
+  * opencv4[calib3d,core,directml,dnn,dshow,fs,gapi,highgui,intrinsics,jpeg,msmf,png,quirc,thread,tiff,webp,win32ui]:x64-windows@4.12.0#1
+  * optional-lite:x64-windows@3.6.0
+  * protobuf:x64-windows@5.29.5#3
+  * quirc:x64-windows@1.2
+  * re2:x64-windows@2025-11-05
+  * safeint:x64-windows@3.0.28
+  * tiff[core,jpeg,lzma,zip]:x64-windows@4.7.1
+  * utf8-range:x64-windows@5.29.5
+  * vcpkg-boost:x64-windows@2025-03-29
+  * vcpkg-cmake:x64-windows@2024-04-23
+  * vcpkg-cmake-config:x64-windows@2024-05-23
+  * vcpkg-get-python-packages:x64-windows@2025-04-05
+  * wil:x64-windows@1.0.250325.1
+  * zlib:x64-windows@1.3.1
+ftxui provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(ftxui CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE ftxui::dom ftxui::screen ftxui::component)
+
+ftxui provides pkg-config modules:
+
+  # C++ Functional Terminal User Interface.
+  ftxui
+
+The package nlohmann-json provides CMake targets:
+
+    find_package(nlohmann_json CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE nlohmann_json::nlohmann_json)
+
+The package nlohmann-json can be configured to not provide implicit conversions via a custom triplet file:
+
+    set(nlohmann-json_IMPLICIT_CONVERSIONS OFF)
+
+For more information, see the docs here:
+    
+    https://json.nlohmann.me/api/macros/json_use_implicit_conversions/
+
+onnxruntime provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(onnxruntime CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE onnxruntime::onnxruntime)
+
+onnxruntime provides pkg-config modules:
+
+  # ONNX runtime
+  libonnxruntime
+
+All requested installations completed successfully in: 1.23 ms
+-- Running vcpkg install - done
+-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+-- Configuring done (2.9s)
+-- Generating done (0.2s)
+-- Build files have been written to: C:/Users/mgpsk/Documents/AVISION/build
+[BUILD] compiling...
+MSBuild version 17.12.12+1cce77968 for .NET Framework
+
+  Building Custom Rule C:/Users/mgpsk/Documents/AVISION/CMakeLists.txt
+  main.cpp
+  Engine.cpp
+  GeometryEngine.cpp
+  DistanceEngine.cpp
+  ObjectEngine.cpp
+  TemporalModule.cpp
+  DepthEngine.cpp
+  FreeSpaceModule.cpp
+  EdgeSafetyModule.cpp
+  OCRModule.cpp
+  PathGuidanceModule.cpp
+  SceneUnderstandingModule.cpp
+  ConfigLoader.cpp
+  SegmentationModule.cpp
+  MobileSAMBackend.cpp
+  ClassicalBackend.cpp
+  FillModule.cpp
+  LaMaBackend.cpp
+  DesktopCamera.cpp
+  DesktopAudio.cpp
+  Generating Code...
+  AVision.vcxproj -> C:\Users\mgpsk\Documents\AVISION\build\Release\AVision.exe
+MSBuild version 17.12.12+1cce77968 for .NET Framework
+
+  Building Custom Rule C:/Users/mgpsk/Documents/AVISION/CMakeLists.txt
+  video_cli.cpp
+  ImageCLI.cpp
+  Engine.cpp
+  ObjectEngine.cpp
+  TemporalModule.cpp
+  GeometryEngine.cpp
+  FreeSpaceModule.cpp
+  EdgeSafetyModule.cpp
+  OCRModule.cpp
+  PathGuidanceModule.cpp
+  SceneUnderstandingModule.cpp
+  DistanceEngine.cpp
+  DepthEngine.cpp
+  DesktopAudio.cpp
+  ConfigLoader.cpp
+  SegmentationModule.cpp
+  MobileSAMBackend.cpp
+  ClassicalBackend.cpp
+  FillModule.cpp
+  LaMaBackend.cpp
+  Generating Code...
+  AVisionCLI.vcxproj -> C:\Users\mgpsk\Documents\AVISION\build\Release\AVisionCLI.exe
+
+[SUCCESS] Build complete!
+Run the app with: build\Release\AVision.exe
+
+Press any key to continue . . . 

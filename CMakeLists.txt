@@ -75,5 +75,16 @@ add_executable(AVisionCLI
 )
 target_link_libraries(AVisionCLI ${OpenCV_LIBS} onnxruntime::onnxruntime)
 
+# --- Configuration Tool (TUI) ---
+find_package(ftxui CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+
+add_executable(AVisionConfig src/tools/ConfigTool.cpp)
+target_link_libraries(AVisionConfig PRIVATE 
+    ftxui::screen
+    ftxui::dom
+    ftxui::component
+    nlohmann_json::nlohmann_json
+)
 
 

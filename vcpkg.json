@@ -8,7 +8,9 @@
                 "highgui"
             ]
         },
-        "onnxruntime"
+        "onnxruntime",
+        "ftxui",
+        "nlohmann-json"
     ],
     "builtin-baseline": "25b458671af03578e6a34edd8f0d1ac85e084df4"
 }
