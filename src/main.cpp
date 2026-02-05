@@ -143,6 +143,15 @@ int main() {
         std::cout << "[AVision] System Active. Press 'q' to quit." << std::endl;
         
         while (true) {
+            // 4a. Capture Frame
+            if (!camera->capture(frame)) {
+                // If capture fails (end of file or device error), we can stop
+                // But for webcam, sometimes we drop frames.
+                // Assuming blocking capture for now.
+                // If using video file, this means EOF.
+                 break; 
+            }
+
             // Process Frame
             // We use the overload that provides debug output for visualization
             bool running = engine.processFrame(frame, debugFrame);

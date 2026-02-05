@@ -80,65 +80,20 @@ onnxruntime provides pkg-config modules:
   # ONNX runtime
   libonnxruntime
 
-All requested installations completed successfully in: 1.23 ms
+All requested installations completed successfully in: 1.51 ms
 -- Running vcpkg install - done
 -- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
--- Configuring done (2.9s)
+-- Configuring done (3.6s)
 -- Generating done (0.2s)
 -- Build files have been written to: C:/Users/mgpsk/Documents/AVISION/build
 [BUILD] compiling...
 MSBuild version 17.12.12+1cce77968 for .NET Framework
 
-  Building Custom Rule C:/Users/mgpsk/Documents/AVISION/CMakeLists.txt
-  main.cpp
-  Engine.cpp
-  GeometryEngine.cpp
-  DistanceEngine.cpp
-  ObjectEngine.cpp
-  TemporalModule.cpp
-  DepthEngine.cpp
-  FreeSpaceModule.cpp
-  EdgeSafetyModule.cpp
-  OCRModule.cpp
-  PathGuidanceModule.cpp
-  SceneUnderstandingModule.cpp
-  ConfigLoader.cpp
-  SegmentationModule.cpp
-  MobileSAMBackend.cpp
-  ClassicalBackend.cpp
-  FillModule.cpp
-  LaMaBackend.cpp
-  DesktopCamera.cpp
-  DesktopAudio.cpp
-  Generating Code...
   AVision.vcxproj -> C:\Users\mgpsk\Documents\AVISION\build\Release\AVision.exe
 MSBuild version 17.12.12+1cce77968 for .NET Framework
 
-  Building Custom Rule C:/Users/mgpsk/Documents/AVISION/CMakeLists.txt
-  video_cli.cpp
-  ImageCLI.cpp
-  Engine.cpp
-  ObjectEngine.cpp
-  TemporalModule.cpp
-  GeometryEngine.cpp
-  FreeSpaceModule.cpp
-  EdgeSafetyModule.cpp
-  OCRModule.cpp
-  PathGuidanceModule.cpp
-  SceneUnderstandingModule.cpp
-  DistanceEngine.cpp
-  DepthEngine.cpp
-  DesktopAudio.cpp
-  ConfigLoader.cpp
-  SegmentationModule.cpp
-  MobileSAMBackend.cpp
-  ClassicalBackend.cpp
-  FillModule.cpp
-  LaMaBackend.cpp
-  Generating Code...
   AVisionCLI.vcxproj -> C:\Users\mgpsk\Documents\AVISION\build\Release\AVisionCLI.exe
 
 [SUCCESS] Build complete!
 Run the app with: build\Release\AVision.exe
 
-Press any key to continue . . . 

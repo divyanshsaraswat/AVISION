@@ -57,7 +57,7 @@ std::vector<ModuleConfig> modules;
 std::map<std::string, std::vector<std::string>> modelOptions = {
     {"ObjectModule", {"MobileNetSSD", "YOLOv8n", "YOLOv8s", "Custom..."}},
     {"DepthModule", {"MiDaS Small", "MiDaS Large", "Custom..."}},
-    {"OCRModule", {"Tesseract", "EasyOCR", "Custom..."}},
+    {"OCRModule", {"Default", "Custom..."}},
     {"SceneUnderstandingModule", {"ResNet18 Places", "ResNet50 Places", "Custom..."}},
     {"SegmentationModule", {"DeepLabv3", "MobileSAM", "Custom..."}},
     {"PoseModule", {"MoveNet", "OpenPose", "Custom..."}},
@@ -214,7 +214,7 @@ void RunBuild() {
                 next_step = 4;
                 done = true;
                 if (g_on_build_success) {
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                    std::this_thread::sleep_for(std::chrono::seconds(5));
                     g_on_build_success();
                 }
             }

@@ -56,8 +56,7 @@
             "name": "OCRModule",
             "params": {
                 "detectModel": "build/Release/models/text_detection_db.onnx",
-                "interval": "35",
-                "recogModel": "build/Release/models/text_recognition_crnn.onnx"
+                "interval": "35"
             }
         },
         {

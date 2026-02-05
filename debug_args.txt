@@ -1,0 +1,2 @@
+Args passed to run_build_core:  
+Calling build.bat core 

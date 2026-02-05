@@ -48,4 +48,4 @@ echo.
 echo [SUCCESS] Build complete!
 echo Run the app with: build\Release\AVision.exe
 echo.
-if "%1" neq "--step=core" pause
+if /I "%~1" neq "core" pause

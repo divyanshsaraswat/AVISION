@@ -12,7 +12,6 @@ $urlMap = @{
     "resnet18_places365.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/resnet18_places365.onnx";
     "scene_classes.txt" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/googlenet_paces365_scene_classes.txt";
     "text_detection_db.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/text_detection_db.onnx";
-    "text_recognition_crnn.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/text_recognition_crnn.onnx";
     "mobile_sam_encoder.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/mobile_sam_encoder.onnx";
     "mobile_sam_decoder.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/mobile_sam_decoder.onnx";
     "big_lama.onnx" = "https://github.com/divyanshsaraswat/onnx-models/releases/download/latest/big-lama-standalone.onnx"
@@ -105,8 +104,8 @@ if (Test-Path $jsonFile) {
                                 Write-Host "[Setup] Downloading $filename..."
                                 $procs = Start-Process -FilePath "curl.exe" -ArgumentList "-L", "-o", $path, $url -NoNewWindow -PassThru -Wait
                                 if ($procs.ExitCode -ne 0) {
-                                    Write-Host "[Setup] Error downloading $filename" -ForegroundColor Red
-                                    exit 1
+                                     Write-Host "[Setup] Error downloading $filename" -ForegroundColor Red
+                                     exit 1
                                 }
                             }
                         }
@@ -115,6 +114,4 @@ if (Test-Path $jsonFile) {
             }
         }
     }
-} else {
-    Write-Host "[Setup] Warning: $jsonFile not found."
 }

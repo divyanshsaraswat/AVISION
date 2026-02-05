@@ -18,17 +18,23 @@ bool OCRModule::init(const std::map<std::string, std::string>& params) {
             std::cout << "[OCRModule] Loaded Detection Model: " << detPath << std::endl;
         }
         if (!recPath.empty()) {
-            recognizer = cv::dnn::readNet(recPath);
-            std::cout << "[OCRModule] Loaded Recognition Model: " << recPath << std::endl;
+            try {
+                recognizer = cv::dnn::readNet(recPath);
+                std::cout << "[OCRModule] Loaded Recognition Model: " << recPath << std::endl;
+            } catch (const std::exception& e) {
+                std::cout << "[OCRModule] Warning: Could not load Recognition model (" << e.what() << "). Proceeding with Detection only." << std::endl;
+            }
         }
         
-        if (!detector.empty() && !recognizer.empty()) {
+        if (!detector.empty()) {
             modelsLoaded = true;
             // Set backend to OpenCV/CPU for edge compatibility
             detector.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
             detector.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-            recognizer.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-            recognizer.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+            if (!recognizer.empty()) {
+                recognizer.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+                recognizer.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+            }
         } else {
             std::cout << "[OCRModule] Models not found or invalid. Module will be passive." << std::endl;
         }
