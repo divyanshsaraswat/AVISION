@@ -39,38 +39,37 @@
 
 ---
 
+## � Documentation
+*   [**�🚀 Release Notes v1.5**](RELEASE_v1.5.md): New features, architecture changes, and changelog.
+*   [**📱 Android Setup**](ANDROID_SETUP.md): Guide for porting and building A-Vision on Android.
+*   [**💡 Ideation & Design**](Ideation.md): Original concept and architectural decisions.
+*   [**🔮 Future Roadmap**](In-Future.md): Planned features and long-term vision.
+
 ## 🚀 Getting Started
 
 ### Prerequisites
 *   **Git**: Version control.
 *   **CMake**: Build system generator (v3.14+).
-*   **C++ Compiler**: MSVC (Visual Studio 2022) on Windows, or GCC/Clang on Linux.
-
-> **Note**: You do NOT need to manually install OpenCV or ONNX Runtime. The project handles dependencies automatically via `vcpkg`.
+*   **C++ Compiler**: MSVC (Visual Studio 2022) on Windows.
 
 ### 🛠️ One-Click Setup (Windows)
 
 1.  **Initialize Dependencies**:
-    Run the setup script **once** to install the package manager.
+    Run the setup script **once** to install VCPKG and core libraries.
     ```cmd
     .\setup_vcpkg.bat
     ```
 
-2.  **Download AI Models (Phase 2)**:
-    Required for Object Detection.
-    ```cmd
-    .\download_models.bat
-    ```
-    *Note: Models are also automatically checked and downloaded during the build process.*
-
-3.  **Build the System**:
-    This script configures CMake, downloads OpenCV (if needed), and compiles the Release build.
+2.  **Build & Configure**:
+    Run the interactive builder. This handles **Model Downloads** and **Compilation**.
     ```cmd
     .\build.bat
     ```
-    *First run may take 10-15 minutes to compile OpenCV. Subsequent builds are instant.*
+    *   **Select Modules**: Enable/Disable features like OCR or Depth.
+    *   **Setup/Download**: The tool checks for required models automatically.
+    *   **Press F1**: To Save Config & Build.
 
-4.  **Run the Application**:
+3.  **Run the Application**:
     ```cmd
     build\Release\AVision.exe
     ```
